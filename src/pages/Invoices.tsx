@@ -2,6 +2,8 @@ import { useAuth } from "@/lib/auth";
 import { loadDb, fmtMoney, fmtDate, totalAdvance, balanceDue } from "@/lib/db";
 import { Link } from "react-router-dom";
 import { FileText, TrendingUp, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/PaginationBar";
 
 export function InvoicesPage() {
   const { user } = useAuth();
@@ -19,6 +21,10 @@ export function InvoicesPage() {
   const totalPaid = list.filter(i => i.paid).reduce((s, i) => s + i.amount, 0);
   const totalPending = list.filter(i => !i.paid).reduce((s, i) => s + i.amount, 0);
   const totalAdvancePaid = ordersWithAdvance.reduce((s, o) => s + totalAdvance(o), 0);
+
+  const PAGE_SIZE = 10;
+  const { paged: pagedInvoices, page: invPage, setPage: setInvPage, totalPages: invTotalPages, start: invStart, end: invEnd } = usePagination(list, PAGE_SIZE);
+  const { paged: pagedLedger, page: ledPage, setPage: setLedPage, totalPages: ledTotalPages, start: ledStart, end: ledEnd } = usePagination(ordersWithAdvance, PAGE_SIZE);
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -44,8 +50,9 @@ export function InvoicesPage() {
 
       {/* Invoices table */}
       <div className="card-luxe overflow-hidden">
-        <div className="px-5 py-4 border-b border-border/60">
+        <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between gap-2 flex-wrap">
           <h2 className="font-semibold text-brand-dark">All Invoices</h2>
+          {list.length > 0 && <p className="text-xs text-muted-foreground">Showing {invStart + 1}–{invEnd} of {list.length}</p>}
         </div>
         <table className="w-full text-sm">
           <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -60,7 +67,7 @@ export function InvoicesPage() {
             </tr>
           </thead>
           <tbody>
-            {list.map(inv => {
+            {pagedInvoices.map(inv => {
               const o = db.orders.find(o => o.id === inv.orderId);
               const adv = o ? totalAdvance(o) : 0;
               const bal = o ? balanceDue(o) : inv.amount;
@@ -100,14 +107,27 @@ export function InvoicesPage() {
             )}
           </tbody>
         </table>
+        {invTotalPages > 1 && (
+          <div className="px-5 border-t border-border/60">
+            <PaginationBar
+              page={invPage}
+              totalPages={invTotalPages}
+              onPageChange={setInvPage}
+              label={`${invStart + 1}–${invEnd} of ${list.length} invoices`}
+            />
+          </div>
+        )}
       </div>
 
       {/* Advance Payments section */}
       {ordersWithAdvance.length > 0 && (
         <div className="card-luxe overflow-hidden">
-          <div className="px-5 py-4 border-b border-border/60">
-            <h2 className="font-semibold text-brand-dark">Advance Payment Ledger</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">All recorded advance payments per order</p>
+          <div className="px-5 py-4 border-b border-border/60 flex items-center justify-between gap-2 flex-wrap">
+            <div>
+              <h2 className="font-semibold text-brand-dark">Advance Payment Ledger</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">All recorded advance payments per order</p>
+            </div>
+            {ordersWithAdvance.length > 0 && <p className="text-xs text-muted-foreground">Showing {ledStart + 1}–{ledEnd} of {ordersWithAdvance.length}</p>}
           </div>
           <table className="w-full text-sm">
             <thead className="bg-secondary/50 text-xs uppercase tracking-wider text-muted-foreground">
@@ -120,7 +140,7 @@ export function InvoicesPage() {
               </tr>
             </thead>
             <tbody>
-              {ordersWithAdvance.map(o => {
+              {pagedLedger.map(o => {
                 const client = db.clients.find(c => c.id === o.clientId);
                 const adv = totalAdvance(o);
                 const bal = balanceDue(o);
@@ -144,6 +164,16 @@ export function InvoicesPage() {
               })}
             </tbody>
           </table>
+          {ledTotalPages > 1 && (
+            <div className="px-5 border-t border-border/60">
+              <PaginationBar
+                page={ledPage}
+                totalPages={ledTotalPages}
+                onPageChange={setLedPage}
+                label={`${ledStart + 1}–${ledEnd} of ${ordersWithAdvance.length} entries`}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

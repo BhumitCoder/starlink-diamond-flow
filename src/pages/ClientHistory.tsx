@@ -5,6 +5,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/PaginationBar";
 import {
   ArrowLeft, Package, Search, Mail, Phone, MapPin, Globe,
   FileText, TrendingUp, Clock, CheckCircle2, AlertCircle,
@@ -53,6 +55,9 @@ export function ClientHistoryPage() {
     const matchS = statusFilter === "all" || o.status === statusFilter;
     return matchQ && matchS;
   });
+
+  const PAGE_SIZE = 10;
+  const { paged, page, setPage, totalPages, start, end } = usePagination(filtered, PAGE_SIZE);
 
   const downloadClientReport = () => {
     const doc = new jsPDF();
@@ -223,6 +228,7 @@ export function ClientHistoryPage() {
           <div>
             <h2 className="font-display text-xl text-brand-dark">Order History</h2>
             <p className="text-xs text-muted-foreground mt-0.5">{filtered.length} of {allOrders.length} orders</p>
+            {filtered.length > 0 && <p className="text-xs text-muted-foreground">Showing {start + 1}–{end}</p>}
           </div>
           <div className="flex gap-2 flex-wrap">
             <div className="relative">
@@ -262,7 +268,7 @@ export function ClientHistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((o, i) => {
+              {paged.map((o, i) => {
                 const invoice = allInvoices.find(inv => inv.orderId === o.id);
                 const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
                 const adv = totalAdvance(o);
@@ -324,7 +330,7 @@ export function ClientHistoryPage() {
 
         {/* Mobile cards */}
         <div className="md:hidden divide-y divide-border/40">
-          {filtered.map(o => {
+          {paged.map(o => {
             const invoice = allInvoices.find(inv => inv.orderId === o.id);
             const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
             const adv = totalAdvance(o);
@@ -368,6 +374,18 @@ export function ClientHistoryPage() {
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <Package className="h-12 w-12 mb-3 opacity-20" />
             <p className="font-medium">{allOrders.length === 0 ? "No orders yet" : "No orders match filters"}</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="px-5 border-t border-border/60">
+            <PaginationBar
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              label={`Showing ${start + 1}–${end} of ${filtered.length} orders`}
+            />
           </div>
         )}
 
