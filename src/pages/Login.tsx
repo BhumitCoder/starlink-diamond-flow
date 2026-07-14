@@ -61,11 +61,6 @@ export function LoginPage() {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
             </Button>
           </form>
-          <div className="mt-6 p-3 rounded-xl bg-secondary text-xs text-secondary-foreground">
-            <p className="font-semibold mb-1">Demo credentials</p>
-            <p>Admin: <span className="font-mono">admin</span> / <span className="font-mono">admin123</span></p>
-            <p>Employee &amp; Client accounts are managed by the Super Admin.</p>
-          </div>
         </div>
         <p className="text-center text-white/60 text-xs mt-6">© {new Date().getFullYear()} Starlink Jewels — Fine Diamond Jewelry, USA</p>
       </motion.div>
