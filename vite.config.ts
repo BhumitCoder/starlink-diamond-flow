@@ -1,15 +1,43 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
-//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
-//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { VitePWA } from "vite-plugin-pwa";
+import path from "node:path";
 
 export default defineConfig({
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+  plugins: [
+    react(),
+    tailwindcss(),
+    tsconfigPaths(),
+    VitePWA({
+      registerType: "autoUpdate",
+      injectRegister: "auto",
+      includeAssets: ["favicon.ico", "logo.png"],
+      manifest: {
+        name: "Starlink Jewels",
+        short_name: "Starlink",
+        description: "Starlink Jewels — B2B Diamond Jewelry Order Management",
+        theme_color: "#2F5DAA",
+        background_color: "#F7F9FC",
+        display: "standalone",
+        start_url: "/",
+        scope: "/",
+        icons: [
+          { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        ],
+      },
+      workbox: {
+        navigateFallback: "/index.html",
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,webp,woff2}"],
+      },
+      devOptions: { enabled: false },
+    }),
+  ],
+  resolve: {
+    alias: { "@": path.resolve(process.cwd(), "src") },
   },
+  server: { host: "::", port: 8080, strictPort: true },
+  preview: { host: "::", port: 8080, strictPort: true },
 });
