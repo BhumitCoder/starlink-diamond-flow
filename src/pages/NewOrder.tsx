@@ -13,8 +13,6 @@ import {
 import { toast } from "sonner";
 import { DollarSign, Building2 } from "lucide-react";
 
-const AUTO_RATE = { diamond: 3500, metal: 65 };
-
 export function NewOrderPage() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -22,10 +20,13 @@ export function NewOrderPage() {
   const isEmployee = user?.role === "employee";
   const isClient   = user?.role === "client";
 
-  /* load clients list for admin picker */
+  /* load clients list + pricing rates from settings */
+  const initDb     = loadDb();
   const allClients = isAdmin || isEmployee
-    ? loadDb().clients.filter(c => c.status === "active")
+    ? initDb.clients.filter(c => c.status === "active")
     : [];
+  const diamondRate = initDb.settings.diamondRate ?? 3500;
+  const metalRate   = initDb.settings.metalRate   ?? 65;
 
   const [f, setF] = useState({
     /* client selection (admin/employee only) */
@@ -43,7 +44,7 @@ export function NewOrderPage() {
     priority: "Normal",
 
     /* order value — editable, pre-seeded from auto-calc */
-    orderValue: Math.round(0.5 * AUTO_RATE.diamond + 3 * AUTO_RATE.metal), // 1945
+    orderValue: Math.round(0.5 * diamondRate + 3 * metalRate),
     valueManuallySet: false,
 
     /* advance */
@@ -58,7 +59,7 @@ export function NewOrderPage() {
     if (!f.valueManuallySet) {
       setF(prev => ({
         ...prev,
-        orderValue: Math.round(Number(prev.diamondWeight) * AUTO_RATE.diamond + Number(prev.metalWeight) * AUTO_RATE.metal),
+        orderValue: Math.round(Number(prev.diamondWeight) * diamondRate + Number(prev.metalWeight) * metalRate),
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -72,7 +73,7 @@ export function NewOrderPage() {
   };
 
   const resetValueToAuto = () => {
-    const auto = Math.round(Number(f.diamondWeight) * AUTO_RATE.diamond + Number(f.metalWeight) * AUTO_RATE.metal);
+    const auto = Math.round(Number(f.diamondWeight) * diamondRate + Number(f.metalWeight) * metalRate);
     setF(prev => ({ ...prev, orderValue: auto, valueManuallySet: false }));
   };
 
@@ -162,7 +163,7 @@ export function NewOrderPage() {
   };
 
   const balanceDue = Math.max(0, f.orderValue - Number(f.advanceAmount));
-  const autoValue  = Math.round(Number(f.diamondWeight) * AUTO_RATE.diamond + Number(f.metalWeight) * AUTO_RATE.metal);
+  const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate + Number(f.metalWeight) * metalRate);
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -330,7 +331,7 @@ export function NewOrderPage() {
             <span>
               Auto-estimate based on weights:&nbsp;
               <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
-              <span className="ml-1">(Diamond {f.diamondWeight}ct × $3,500 + Metal {f.metalWeight}g × $65)</span>
+              <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()} + Metal {f.metalWeight}g × ${metalRate.toLocaleString()})</span>
             </span>
             {f.valueManuallySet && (
               <button type="button" onClick={resetValueToAuto}

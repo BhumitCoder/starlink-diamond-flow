@@ -116,6 +116,8 @@ export interface Settings {
   currency: string;
   language: string;
   notifications: boolean;
+  diamondRate: number; // $ per carat
+  metalRate: number;   // $ per gram
 }
 
 export interface DB {
@@ -132,7 +134,7 @@ export interface DB {
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65 }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -147,6 +149,9 @@ export function loadDb(): DB {
     const db = JSON.parse(raw) as DB;
     // backward-compat: add advances array to orders that don't have it
     db.orders = db.orders.map(o => ({ advances: [], ...o }));
+    // backward-compat: add pricing rates if missing
+    if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
+    if (db.settings.metalRate == null) db.settings.metalRate = 65;
     return db;
   } catch { return emptyDb(); }
 }
