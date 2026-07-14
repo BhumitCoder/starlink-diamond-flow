@@ -1,123 +1,350 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { updateDb, uid, TIMELINE_STEPS, type Order } from "@/lib/db";
+import { loadDb, updateDb, uid, TIMELINE_STEPS, type Order } from "@/lib/db";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select, SelectContent, SelectItem,
+  SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { DollarSign } from "lucide-react";
+import { DollarSign, Building2 } from "lucide-react";
+
+const AUTO_RATE = { diamond: 3500, metal: 65 };
 
 export function NewOrderPage() {
   const { user } = useAuth();
   const nav = useNavigate();
+  const isAdmin    = user?.role === "admin";
+  const isEmployee = user?.role === "employee";
+  const isClient   = user?.role === "client";
+
+  /* load clients list for admin picker */
+  const allClients = isAdmin || isEmployee
+    ? loadDb().clients.filter(c => c.status === "active")
+    : [];
+
   const [f, setF] = useState({
-    jewelleryType: "Ring", metal: "Gold", diamondType: "Natural",
-    quantity: 1, diamondWeight: 0.5, metalWeight: 3,
-    instructions: "", expectedDelivery: "", priority: "Normal",
-    advanceAmount: 0, advanceNote: "",
+    /* client selection (admin/employee only) */
+    clientId: isClient ? (user!.clientId ?? "") : "",
+
+    /* order fields */
+    jewelleryType: "Ring",
+    metal: "Gold",
+    diamondType: "Natural",
+    quantity: 1,
+    diamondWeight: 0.5,
+    metalWeight: 3,
+    instructions: "",
+    expectedDelivery: "",
+    priority: "Normal",
+
+    /* order value — editable, pre-seeded from auto-calc */
+    orderValue: Math.round(0.5 * AUTO_RATE.diamond + 3 * AUTO_RATE.metal), // 1945
+    valueManuallySet: false,
+
+    /* advance */
+    advanceAmount: 0,
+    advanceNote: "",
   });
+
   const [saving, setSaving] = useState(false);
 
-  const estimatedAmount = Math.round(Number(f.diamondWeight) * 3500 + Number(f.metalWeight) * 65);
+  /* auto-update order value when weights change (unless user manually typed it) */
+  useEffect(() => {
+    if (!f.valueManuallySet) {
+      setF(prev => ({
+        ...prev,
+        orderValue: Math.round(Number(prev.diamondWeight) * AUTO_RATE.diamond + Number(prev.metalWeight) * AUTO_RATE.metal),
+      }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.diamondWeight, f.metalWeight]);
+
+  const set = (key: string, value: unknown) =>
+    setF(prev => ({ ...prev, [key]: value }));
+
+  const handleOrderValueChange = (raw: string) => {
+    setF(prev => ({ ...prev, orderValue: Number(raw) || 0, valueManuallySet: true }));
+  };
+
+  const resetValueToAuto = () => {
+    const auto = Math.round(Number(f.diamondWeight) * AUTO_RATE.diamond + Number(f.metalWeight) * AUTO_RATE.metal);
+    setF(prev => ({ ...prev, orderValue: auto, valueManuallySet: false }));
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (user!.role !== "client") { toast.error("Only clients can create order requests."); return; }
+
+    /* validation */
+    if (!isClient && !isAdmin && !isEmployee) {
+      toast.error("You don't have permission to create orders.");
+      return;
+    }
+    if ((isAdmin || isEmployee) && !f.clientId) {
+      toast.error("Please select a client for this order.");
+      return;
+    }
+    if (f.orderValue <= 0) {
+      toast.error("Please enter a valid order value.");
+      return;
+    }
+
     setSaving(true);
-    const clientId = user!.clientId!;
+    const clientId = isClient ? user!.clientId! : f.clientId;
+
     updateDb(d => {
       const num = `SLJ-${new Date().getFullYear()}-${String(1000 + d.orders.length + 1).padStart(4, "0")}`;
       const advance = Number(f.advanceAmount) || 0;
+
       const order: Order = {
-        id: uid("o_"), orderNumber: num, clientId, contactPerson: user!.name,
-        jewelleryType: f.jewelleryType as any, metal: f.metal as any, diamondType: f.diamondType as any,
-        quantity: Number(f.quantity), diamondWeight: Number(f.diamondWeight), metalWeight: Number(f.metalWeight),
-        images: [], instructions: f.instructions,
+        id: uid("o_"),
+        orderNumber: num,
+        clientId,
+        contactPerson: user!.name,
+        jewelleryType: f.jewelleryType as Order["jewelleryType"],
+        metal: f.metal as Order["metal"],
+        diamondType: f.diamondType as Order["diamondType"],
+        quantity: Number(f.quantity),
+        diamondWeight: Number(f.diamondWeight),
+        metalWeight: Number(f.metalWeight),
+        images: [],
+        instructions: f.instructions,
         expectedDelivery: f.expectedDelivery || new Date(Date.now() + 45 * 86400000).toISOString(),
-        priority: f.priority as any, status: "Waiting",
-        amount: estimatedAmount,
+        priority: f.priority as Order["priority"],
+        status: "Waiting",
+        amount: f.orderValue,
         advances: advance > 0 ? [{
-          id: uid("adv_"), amount: advance,
+          id: uid("adv_"),
+          amount: advance,
           note: f.advanceNote || "Initial advance",
           recordedBy: user!.id,
           createdAt: new Date().toISOString(),
         }] : [],
         timeline: TIMELINE_STEPS.map((s, i) => ({
-          step: s, status: i === 0 ? "done" : "pending",
+          step: s,
+          status: i === 0 ? "done" : "pending" as "done" | "pending",
           date: i === 0 ? new Date().toISOString() : undefined,
         })),
         createdAt: new Date().toISOString(),
       };
+
       d.orders.unshift(order);
-      const admin = d.users.find(u => u.role === "admin");
-      if (admin) d.notifications.unshift({
-        id: uid("n_"), userId: admin.id, title: "New Order",
-        body: `${order.orderNumber} from ${d.clients.find(c => c.id === clientId)?.companyName}${advance > 0 ? ` · Advance $${advance}` : ""}`,
-        type: "order", read: false, createdAt: new Date().toISOString(),
-      });
+
+      /* notify admin (if submitted by client) */
+      if (isClient) {
+        const admin = d.users.find(u => u.role === "admin");
+        if (admin) d.notifications.unshift({
+          id: uid("n_"), userId: admin.id,
+          title: "New Order Request",
+          body: `${order.orderNumber} from ${d.clients.find(c => c.id === clientId)?.companyName ?? "client"}${advance > 0 ? ` · Advance $${advance}` : ""}`,
+          type: "order", read: false, createdAt: new Date().toISOString(),
+        });
+      }
+
+      /* notify client (if created by admin/employee) */
+      if (isAdmin || isEmployee) {
+        const clientUser = d.users.find(u => u.clientId === clientId && u.role === "client");
+        if (clientUser) d.notifications.unshift({
+          id: uid("n_"), userId: clientUser.id,
+          title: "Order Created",
+          body: `${order.orderNumber} has been created for your account.`,
+          type: "order", read: false, createdAt: new Date().toISOString(),
+        });
+      }
     });
-    toast.success("Order submitted for approval");
+
+    toast.success("Order submitted successfully");
     nav("/orders");
   };
 
+  const balanceDue = Math.max(0, f.orderValue - Number(f.advanceAmount));
+  const autoValue  = Math.round(Number(f.diamondWeight) * AUTO_RATE.diamond + Number(f.metalWeight) * AUTO_RATE.metal);
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-      <h1 className="font-display text-3xl text-brand-dark">New Order Request</h1>
+      <div>
+        <h1 className="font-display text-3xl text-brand-dark">New Order</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          {isClient ? "Submit a new jewellery order request" : "Create an order on behalf of a client"}
+        </p>
+      </div>
+
       <form onSubmit={submit} className="space-y-5">
 
-        {/* Order Details */}
+        {/* ── Client selector (admin / employee only) ── */}
+        {(isAdmin || isEmployee) && (
+          <div className="card-luxe p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+                <Building2 className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-brand-dark">Client</h2>
+                <p className="text-xs text-muted-foreground">Select the client this order belongs to</p>
+              </div>
+            </div>
+
+            <Field label="Select Client *">
+              <Select value={f.clientId} onValueChange={v => set("clientId", v)} required>
+                <SelectTrigger className="rounded-xl h-11">
+                  <SelectValue placeholder="Choose a client…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allClients.map(c => (
+                    <SelectItem key={c.id} value={c.id}>
+                      <span className="font-medium">{c.companyName}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">{c.ownerName}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            {/* Show selected client info */}
+            {f.clientId && (() => {
+              const c = allClients.find(x => x.id === f.clientId);
+              return c ? (
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/50 text-sm">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center shrink-0 text-primary font-bold text-xs">
+                    {c.companyName.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{c.companyName}</p>
+                    <p className="text-xs text-muted-foreground">{c.ownerName} · {c.country}</p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+          </div>
+        )}
+
+        {/* ── Order Details ── */}
         <div className="card-luxe p-6 space-y-5">
           <h2 className="font-semibold text-brand-dark">Order Details</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Jewellery Type">
-              <Select value={f.jewelleryType} onValueChange={v => setF({ ...f, jewelleryType: v })}>
+              <Select value={f.jewelleryType} onValueChange={v => set("jewelleryType", v)}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                <SelectContent>{["Ring","Pendant","Necklace","Bracelet","Earrings","Custom"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {["Ring","Pendant","Necklace","Bracelet","Earrings","Custom"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
+
             <Field label="Metal">
-              <Select value={f.metal} onValueChange={v => setF({ ...f, metal: v })}>
+              <Select value={f.metal} onValueChange={v => set("metal", v)}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                <SelectContent>{["Gold","White Gold","Rose Gold","Platinum","Silver"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {["Gold","White Gold","Rose Gold","Platinum","Silver"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
+
             <Field label="Diamond Type">
-              <Select value={f.diamondType} onValueChange={v => setF({ ...f, diamondType: v })}>
+              <Select value={f.diamondType} onValueChange={v => set("diamondType", v)}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                <SelectContent>{["Natural","Lab Grown"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {["Natural","Lab Grown"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
+
             <Field label="Priority">
-              <Select value={f.priority} onValueChange={v => setF({ ...f, priority: v })}>
+              <Select value={f.priority} onValueChange={v => set("priority", v)}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
-                <SelectContent>{["Normal","Urgent","High Priority"].map(x => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {["Normal","High Priority","Urgent"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
               </Select>
             </Field>
+
             <Field label="Quantity">
-              <Input type="number" min={1} value={f.quantity} onChange={e => setF({ ...f, quantity: +e.target.value })} className="rounded-xl h-11" />
+              <Input type="number" min={1} value={f.quantity}
+                onChange={e => set("quantity", +e.target.value)}
+                className="rounded-xl h-11" />
             </Field>
+
             <Field label="Diamond Weight (ct)">
-              <Input type="number" step="0.01" min={0} value={f.diamondWeight} onChange={e => setF({ ...f, diamondWeight: +e.target.value })} className="rounded-xl h-11" />
+              <Input type="number" step="0.01" min={0} value={f.diamondWeight}
+                onChange={e => set("diamondWeight", +e.target.value)}
+                className="rounded-xl h-11" />
             </Field>
+
             <Field label="Metal Weight (g)">
-              <Input type="number" step="0.01" min={0} value={f.metalWeight} onChange={e => setF({ ...f, metalWeight: +e.target.value })} className="rounded-xl h-11" />
+              <Input type="number" step="0.01" min={0} value={f.metalWeight}
+                onChange={e => set("metalWeight", +e.target.value)}
+                className="rounded-xl h-11" />
             </Field>
+
             <Field label="Expected Delivery">
-              <Input type="date" value={f.expectedDelivery} onChange={e => setF({ ...f, expectedDelivery: e.target.value })} className="rounded-xl h-11" />
+              <Input type="date" value={f.expectedDelivery}
+                onChange={e => set("expectedDelivery", e.target.value)}
+                className="rounded-xl h-11" />
             </Field>
           </div>
+
           <Field label="Special Instructions">
-            <Textarea value={f.instructions} onChange={e => setF({ ...f, instructions: e.target.value })} rows={3} className="rounded-xl" placeholder="Design notes, stone preferences, reference details" />
+            <Textarea
+              value={f.instructions}
+              onChange={e => set("instructions", e.target.value)}
+              rows={3} className="rounded-xl"
+              placeholder="Design notes, stone preferences, reference details" />
           </Field>
         </div>
 
-        {/* Advance Payment */}
+        {/* ── Order Value ── */}
         <div className="card-luxe p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-success/10 grid place-items-center">
+            <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
+              <DollarSign className="h-4 w-4 text-brand-dark" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-brand-dark">Order Value</h2>
+              <p className="text-xs text-muted-foreground">Set the agreed order amount</p>
+            </div>
+          </div>
+
+          <Field label="Order Value ($) *">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
+              <Input
+                type="number" min={0} step="0.01" required
+                value={f.orderValue || ""}
+                onChange={e => handleOrderValueChange(e.target.value)}
+                className="rounded-xl h-11 pl-7 text-base font-semibold"
+                placeholder="0"
+              />
+            </div>
+          </Field>
+
+          {/* Auto-calc hint */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Auto-estimate based on weights:&nbsp;
+              <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
+              <span className="ml-1">(Diamond {f.diamondWeight}ct × $3,500 + Metal {f.metalWeight}g × $65)</span>
+            </span>
+            {f.valueManuallySet && (
+              <button type="button" onClick={resetValueToAuto}
+                className="ml-3 text-primary hover:underline shrink-0 font-medium">
+                Use estimate
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Advance Payment ── */}
+        <div className="card-luxe p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-success/10 grid place-items-center shrink-0">
               <DollarSign className="h-4 w-4 text-success" />
             </div>
             <div>
@@ -126,21 +353,15 @@ export function NewOrderPage() {
             </div>
           </div>
 
-          {/* Estimated amount display */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-secondary text-sm">
-            <span className="text-muted-foreground">Estimated Order Value</span>
-            <span className="font-semibold">${estimatedAmount.toLocaleString()}</span>
-          </div>
-
           <div className="grid md:grid-cols-2 gap-4">
             <Field label="Advance Amount ($)">
               <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
                 <Input
-                  type="number" min={0} step="0.01"
+                  type="number" min={0} max={f.orderValue} step="0.01"
                   value={f.advanceAmount || ""}
-                  onChange={e => setF({ ...f, advanceAmount: +e.target.value })}
-                  className="rounded-xl h-11 pl-9"
+                  onChange={e => set("advanceAmount", +e.target.value)}
+                  className="rounded-xl h-11 pl-7"
                   placeholder="0"
                 />
               </div>
@@ -148,35 +369,41 @@ export function NewOrderPage() {
             <Field label="Payment Note">
               <Input
                 value={f.advanceNote}
-                onChange={e => setF({ ...f, advanceNote: e.target.value })}
+                onChange={e => set("advanceNote", e.target.value)}
                 className="rounded-xl h-11"
                 placeholder="e.g. Cash, Bank transfer, Cheque"
               />
             </Field>
           </div>
 
-          {/* Live balance preview */}
-          {f.advanceAmount > 0 && (
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              <div className="p-3 rounded-xl bg-success/5 border border-success/20 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
-                <p className="font-semibold text-success">${Number(f.advanceAmount).toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-secondary text-center">
-                <p className="text-xs text-muted-foreground mb-1">Order Total</p>
-                <p className="font-semibold">${estimatedAmount.toLocaleString()}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-destructive/5 border border-destructive/20 text-center">
-                <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
-                <p className="font-semibold text-destructive">${Math.max(0, estimatedAmount - Number(f.advanceAmount)).toLocaleString()}</p>
-              </div>
+          {/* Balance preview */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl bg-secondary text-center">
+              <p className="text-xs text-muted-foreground mb-1">Order Total</p>
+              <p className="font-semibold text-brand-dark">${Number(f.orderValue).toLocaleString()}</p>
             </div>
-          )}
+            <div className={`p-3 rounded-xl text-center ${f.advanceAmount > 0 ? "bg-success/5 border border-success/20" : "bg-secondary"}`}>
+              <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
+              <p className={`font-semibold ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
+                ${Number(f.advanceAmount || 0).toLocaleString()}
+              </p>
+            </div>
+            <div className={`p-3 rounded-xl text-center ${balanceDue > 0 ? "bg-destructive/5 border border-destructive/20" : "bg-success/5 border border-success/20"}`}>
+              <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
+              <p className={`font-semibold ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
+                {balanceDue > 0 ? `$${balanceDue.toLocaleString()}` : "✓ Cleared"}
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => nav(-1)} className="rounded-xl">Cancel</Button>
-          <Button type="submit" disabled={saving} className="btn-hero rounded-xl px-6">Submit Order</Button>
+        <div className="flex justify-end gap-2 pb-4">
+          <Button type="button" variant="outline" onClick={() => nav(-1)} className="rounded-xl">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving} className="btn-hero rounded-xl px-8">
+            {saving ? "Submitting…" : "Submit Order"}
+          </Button>
         </div>
       </form>
     </div>
@@ -184,5 +411,10 @@ export function NewOrderPage() {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>{children}</div>;
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
+      {children}
+    </div>
+  );
 }
