@@ -13,7 +13,7 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      includeAssets: ["favicon.ico", "logo.png"],
+      includeAssets: ["favicon.ico", "favicon.png", "icon.png", "logo.png"],
       manifest: {
         name: "Starlink Jewels",
         short_name: "Starlink",
@@ -24,8 +24,8 @@ export default defineConfig({
         start_url: "/",
         scope: "/",
         icons: [
-          { src: "/logo.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
-          { src: "/logo.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "/icon.png", sizes: "512x512", type: "image/png", purpose: "any maskable" },
+          { src: "/icon.png", sizes: "192x192", type: "image/png", purpose: "any" },
         ],
       },
       workbox: {
