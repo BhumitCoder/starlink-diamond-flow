@@ -89,16 +89,12 @@ export function NotificationsPage() {
         ))}
       </div>
 
-      {totalPages > 1 && (
-        <div className="card-luxe px-4 py-1">
-          <PaginationBar
-            page={page}
-            totalPages={totalPages}
-            onPageChange={setPage}
-            label={`Showing ${start + 1}–${end} of ${total}`}
-          />
-        </div>
-      )}
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        label={`Showing ${start + 1}–${end} of ${total}`}
+      />
     </div>
   );
 }

@@ -101,14 +101,12 @@ export function OrdersPage() {
         )}
       </div>
 
-      <div className="card-luxe px-4 py-1">
-        <PaginationBar
-          page={page}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          label={total > 0 ? `Showing ${start + 1}–${end} of ${total} orders` : undefined}
-        />
-      </div>
+      <PaginationBar
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        label={total > 0 ? `Showing ${start + 1}–${end} of ${total} orders` : undefined}
+      />
     </div>
   );
 }
