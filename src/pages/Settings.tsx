@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Diamond, Weight } from "lucide-react";
+import { Diamond, Weight, Truck } from "lucide-react";
 
 export function SettingsPage() {
   const { user } = useAuth();
@@ -108,13 +108,9 @@ export function SettingsPage() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                 <Input
-                  type="number"
-                  min={0}
-                  step={1}
+                  type="number" min={0} step={1}
                   value={db.settings.diamondRate ?? 3500}
-                  onChange={e =>
-                    setDb({ ...db, settings: { ...db.settings, diamondRate: Math.max(0, Number(e.target.value)) } })
-                  }
+                  onChange={e => setDb({ ...db, settings: { ...db.settings, diamondRate: Math.max(0, Number(e.target.value)) } })}
                   className="rounded-xl pl-7"
                 />
               </div>
@@ -130,25 +126,43 @@ export function SettingsPage() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                 <Input
-                  type="number"
-                  min={0}
-                  step={1}
+                  type="number" min={0} step={1}
                   value={db.settings.metalRate ?? 65}
-                  onChange={e =>
-                    setDb({ ...db, settings: { ...db.settings, metalRate: Math.max(0, Number(e.target.value)) } })
-                  }
+                  onChange={e => setDb({ ...db, settings: { ...db.settings, metalRate: Math.max(0, Number(e.target.value)) } })}
                   className="rounded-xl pl-7"
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">per gram</p>
             </div>
+
+            {/* Default shipping charge */}
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5 text-primary" />
+                Default Shipping Charge ($ flat)
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <Input
+                  type="number" min={0} step={1}
+                  value={(db.settings as any).defaultShippingCharge ?? 0}
+                  onChange={e => setDb({ ...db, settings: { ...db.settings, defaultShippingCharge: Math.max(0, Number(e.target.value)) } as any })}
+                  className="rounded-xl pl-7"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">pre-filled on every new order — staff can override per order</p>
+            </div>
           </div>
 
           {/* Live preview */}
           <div className="rounded-xl bg-secondary/50 border border-border/60 px-4 py-3 text-sm text-muted-foreground">
-            Preview: 0.5 ct diamond + 3 g metal ={" "}
+            Example: 0.5 ct diamond + 3 g metal + shipping ={" "}
             <span className="font-semibold text-foreground">
-              ${((db.settings.diamondRate ?? 3500) * 0.5 + (db.settings.metalRate ?? 65) * 3).toLocaleString()}
+              ${(
+                (db.settings.diamondRate ?? 3500) * 0.5 +
+                (db.settings.metalRate ?? 65) * 3 +
+                ((db.settings as any).defaultShippingCharge ?? 0)
+              ).toLocaleString()}
             </span>
           </div>
 

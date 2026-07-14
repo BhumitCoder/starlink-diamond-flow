@@ -21,12 +21,13 @@ export function NewOrderPage() {
   const isClient   = user?.role === "client";
 
   /* load clients list + pricing rates from settings */
-  const initDb     = loadDb();
-  const allClients = isAdmin || isEmployee
+  const initDb          = loadDb();
+  const allClients      = isAdmin || isEmployee
     ? initDb.clients.filter(c => c.status === "active")
     : [];
-  const diamondRate = initDb.settings.diamondRate ?? 3500;
-  const metalRate   = initDb.settings.metalRate   ?? 65;
+  const diamondRate     = initDb.settings.diamondRate             ?? 3500;
+  const metalRate       = initDb.settings.metalRate               ?? 65;
+  const defaultShipping = (initDb.settings as any).defaultShippingCharge ?? 0;
 
   const [f, setF] = useState({
     /* client selection (admin/employee only) */
@@ -46,6 +47,9 @@ export function NewOrderPage() {
     /* order value — editable, pre-seeded from auto-calc */
     orderValue: Math.round(0.5 * diamondRate + 3 * metalRate),
     valueManuallySet: false,
+
+    /* shipping */
+    shippingCharge: defaultShipping,
 
     /* advance */
     advanceAmount: 0,
@@ -118,6 +122,7 @@ export function NewOrderPage() {
         priority: f.priority as Order["priority"],
         status: "Waiting",
         amount: f.orderValue,
+        shippingCharge: Number(f.shippingCharge) || 0,
         advances: advance > 0 ? [{
           id: uid("adv_"),
           amount: advance,
@@ -162,7 +167,9 @@ export function NewOrderPage() {
     nav("/orders");
   };
 
-  const balanceDue = Math.max(0, f.orderValue - Number(f.advanceAmount));
+  const shipping   = Number(f.shippingCharge) || 0;
+  const grandTotal = Number(f.orderValue) + shipping;
+  const balanceDue = Math.max(0, grandTotal - Number(f.advanceAmount));
   const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate + Number(f.metalWeight) * metalRate);
 
   return (
@@ -342,6 +349,31 @@ export function NewOrderPage() {
           </div>
         </div>
 
+        {/* ── Shipping Charge ── */}
+        <div className="card-luxe p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
+              <DollarSign className="h-4 w-4 text-brand-dark" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-brand-dark">Shipping Charge</h2>
+              <p className="text-xs text-muted-foreground">Freight / courier cost added to this order</p>
+            </div>
+          </div>
+          <Field label="Shipping Charge ($)">
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
+              <Input
+                type="number" min={0} step="0.01"
+                value={f.shippingCharge || ""}
+                onChange={e => set("shippingCharge", +e.target.value)}
+                className="rounded-xl h-11 pl-7"
+                placeholder="0"
+              />
+            </div>
+          </Field>
+        </div>
+
         {/* ── Advance Payment ── */}
         <div className="card-luxe p-6 space-y-4">
           <div className="flex items-center gap-2">
@@ -359,7 +391,7 @@ export function NewOrderPage() {
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
                 <Input
-                  type="number" min={0} max={f.orderValue} step="0.01"
+                  type="number" min={0} max={grandTotal} step="0.01"
                   value={f.advanceAmount || ""}
                   onChange={e => set("advanceAmount", +e.target.value)}
                   className="rounded-xl h-11 pl-7"
@@ -377,12 +409,18 @@ export function NewOrderPage() {
             </Field>
           </div>
 
-          {/* Balance preview */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* Balance preview — 4 tiles when shipping > 0, 3 when zero */}
+          <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
             <div className="p-3 rounded-xl bg-secondary text-center">
-              <p className="text-xs text-muted-foreground mb-1">Order Total</p>
+              <p className="text-xs text-muted-foreground mb-1">Order Value</p>
               <p className="font-semibold text-brand-dark">${Number(f.orderValue).toLocaleString()}</p>
             </div>
+            {shipping > 0 && (
+              <div className="p-3 rounded-xl bg-secondary text-center">
+                <p className="text-xs text-muted-foreground mb-1">Shipping</p>
+                <p className="font-semibold text-brand-dark">${shipping.toLocaleString()}</p>
+              </div>
+            )}
             <div className={`p-3 rounded-xl text-center ${f.advanceAmount > 0 ? "bg-success/5 border border-success/20" : "bg-secondary"}`}>
               <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
               <p className={`font-semibold ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
@@ -392,7 +430,7 @@ export function NewOrderPage() {
             <div className={`p-3 rounded-xl text-center ${balanceDue > 0 ? "bg-destructive/5 border border-destructive/20" : "bg-success/5 border border-success/20"}`}>
               <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
               <p className={`font-semibold ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
-                {balanceDue > 0 ? `$${balanceDue.toLocaleString()}` : "✓ Cleared"}
+                {balanceDue > 0 ? `${balanceDue.toLocaleString()}` : "✓ Cleared"}
               </p>
             </div>
           </div>

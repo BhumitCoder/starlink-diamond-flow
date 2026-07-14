@@ -76,6 +76,7 @@ export interface Order {
   assignedEmployeeId?: string;
   estimatedDelivery?: string;
   amount: number;
+  shippingCharge: number;
   advances: AdvancePayment[];
   timeline: TimelineEntry[];
   createdAt: string;
@@ -116,8 +117,9 @@ export interface Settings {
   currency: string;
   language: string;
   notifications: boolean;
-  diamondRate: number; // $ per carat
-  metalRate: number;   // $ per gram
+  diamondRate: number;           // $ per carat
+  metalRate: number;             // $ per gram
+  defaultShippingCharge: number; // $ flat default per order
 }
 
 export interface DB {
@@ -134,7 +136,7 @@ export interface DB {
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65 }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -147,11 +149,12 @@ export function loadDb(): DB {
   }
   try {
     const db = JSON.parse(raw) as DB;
-    // backward-compat: add advances array to orders that don't have it
-    db.orders = db.orders.map(o => ({ advances: [], ...o }));
-    // backward-compat: add pricing rates if missing
+    // backward-compat: fill missing fields on orders
+    db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], ...o }));
+    // backward-compat: fill missing settings fields
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
     if (db.settings.metalRate == null) db.settings.metalRate = 65;
+    if ((db.settings as any).defaultShippingCharge == null) (db.settings as any).defaultShippingCharge = 0;
     return db;
   } catch { return emptyDb(); }
 }
@@ -160,8 +163,13 @@ export function totalAdvance(order: Order): number {
   return (order.advances || []).reduce((s, a) => s + a.amount, 0);
 }
 
+/** Jewellery value + shipping — the amount the client owes in full */
+export function orderTotal(order: Order): number {
+  return order.amount + (order.shippingCharge || 0);
+}
+
 export function balanceDue(order: Order): number {
-  return Math.max(0, order.amount - totalAdvance(order));
+  return Math.max(0, orderTotal(order) - totalAdvance(order));
 }
 
 export function saveDb(db: DB) {

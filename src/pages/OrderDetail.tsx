@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { loadDb, updateDb, fmtMoney, fmtDate, totalAdvance, balanceDue, uid } from "@/lib/db";
+import { loadDb, updateDb, fmtMoney, fmtDate, totalAdvance, orderTotal, balanceDue, uid } from "@/lib/db";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,14 +82,20 @@ export function OrderDetailPage() {
   };
 
   const downloadInvoice = () => {
-    const adv = totalAdvance(order);
-    const bal = balanceDue(order);
+    const adv      = totalAdvance(order);
+    const total    = orderTotal(order);
+    const bal      = balanceDue(order);
+    const shipping = order.shippingCharge || 0;
+
     const doc = new jsPDF();
+    // Header
     doc.setFont("helvetica", "bold"); doc.setFontSize(22);
     doc.text("STARLINK JEWELS", 20, 25);
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
     doc.text("Fine Diamond Jewelry - Manufactured in India - Exported to USA", 20, 32);
     doc.setLineWidth(0.5); doc.line(20, 38, 190, 38);
+
+    // Invoice meta
     doc.setFontSize(16); doc.setFont("helvetica", "bold");
     doc.text("INVOICE", 20, 50);
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
@@ -98,21 +104,43 @@ export function OrderDetailPage() {
     doc.text(`Bill To: ${client?.companyName || ""}`, 20, 76);
     doc.text(`${client?.address || ""}`, 20, 82);
     doc.text(`${client?.email || ""}  ${client?.phone || ""}`, 20, 88);
+
+    // Line items header
     doc.line(20, 100, 190, 100);
-    doc.setFont("helvetica", "bold"); doc.text("Item", 20, 108); doc.text("Qty", 130, 108); doc.text("Amount", 165, 108);
+    doc.setFont("helvetica", "bold");
+    doc.text("Item", 20, 108); doc.text("Qty", 130, 108); doc.text("Amount", 165, 108);
+    doc.line(20, 112, 190, 112);
+
+    // Jewellery line
     doc.setFont("helvetica", "normal");
-    doc.text(`${order.jewelleryType} - ${order.metal} - ${order.diamondType}`, 20, 118);
-    doc.text(String(order.quantity), 130, 118);
-    doc.text(fmtMoney(order.amount), 165, 118);
-    doc.line(20, 128, 190, 128);
+    doc.text(`${order.jewelleryType} - ${order.metal} - ${order.diamondType}`, 20, 121);
+    doc.text(String(order.quantity), 130, 121);
+    doc.text(fmtMoney(order.amount), 165, 121);
+
+    // Shipping line (only if > 0)
+    let lineY = 121;
+    if (shipping > 0) {
+      lineY += 10;
+      doc.text("Shipping & Freight", 20, lineY);
+      doc.text("—", 130, lineY);
+      doc.text(fmtMoney(shipping), 165, lineY);
+    }
+
+    // Totals
+    doc.line(20, lineY + 6, 190, lineY + 6);
     doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-    doc.text("Order Total:", 120, 138); doc.text(fmtMoney(order.amount), 165, 138);
+    doc.text("Order Total:", 120, lineY + 16);
+    doc.text(fmtMoney(total), 165, lineY + 16);
+
     if (adv > 0) {
       doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      doc.text("Advance Paid:", 120, 148); doc.text(`- ${fmtMoney(adv)}`, 165, 148);
+      doc.text("Advance Paid:", 120, lineY + 26);
+      doc.text(`- ${fmtMoney(adv)}`, 165, lineY + 26);
       doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-      doc.text("Balance Due:", 120, 160); doc.text(fmtMoney(bal), 165, 160);
+      doc.text("Balance Due:", 120, lineY + 38);
+      doc.text(fmtMoney(bal), 165, lineY + 38);
     }
+
     doc.setFontSize(9); doc.setFont("helvetica", "italic");
     doc.text("Thank you for choosing Starlink Jewels.", 20, 260);
     doc.save(`Invoice-${order.orderNumber}.pdf`);
@@ -142,16 +170,17 @@ export function OrderDetailPage() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
-          {[
+          {([
             ["Quantity", `${order.quantity} pcs`],
             ["Diamond", `${order.diamondWeight} ct (${order.diamondType})`],
             ["Metal Weight", `${order.metalWeight} g`],
             ["Priority", order.priority],
-            ["Amount", fmtMoney(order.amount)],
+            ["Order Value", fmtMoney(order.amount)],
+            ["Shipping", (order.shippingCharge || 0) > 0 ? fmtMoney(order.shippingCharge) : "—"],
             ["Expected", fmtDate(order.expectedDelivery)],
             ["Assigned to", employee?.name || "—"],
             ["Created", fmtDate(order.createdAt)],
-          ].map(([k, v]) => (
+          ] as [string, string][]).map(([k, v]) => (
             <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="font-medium mt-0.5">{v}</p></div>
           ))}
         </div>
@@ -191,34 +220,51 @@ export function OrderDetailPage() {
         </div>
 
         {/* Summary strip */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-xl bg-secondary text-center">
-            <p className="text-xs text-muted-foreground mb-1">Order Total</p>
-            <p className="font-semibold text-sm">{fmtMoney(order.amount)}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-success/8 border border-success/20 text-center">
-            <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
-            <p className="font-semibold text-sm text-success">{fmtMoney(advTotal)}</p>
-          </div>
-          <div className={`p-3 rounded-xl text-center border ${balance > 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/8 border-success/20"}`}>
-            <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
-            <p className={`font-semibold text-sm ${balance > 0 ? "text-destructive" : "text-success"}`}>
-              {balance > 0 ? fmtMoney(balance) : "✓ Cleared"}
-            </p>
-          </div>
-        </div>
+        {(() => {
+          const shipping = order.shippingCharge || 0;
+          const total = orderTotal(order);
+          return (
+            <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
+              <div className="p-3 rounded-xl bg-secondary text-center">
+                <p className="text-xs text-muted-foreground mb-1">Order Value</p>
+                <p className="font-semibold text-sm">{fmtMoney(order.amount)}</p>
+              </div>
+              {shipping > 0 && (
+                <div className="p-3 rounded-xl bg-secondary text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Shipping</p>
+                  <p className="font-semibold text-sm">{fmtMoney(shipping)}</p>
+                </div>
+              )}
+              <div className="p-3 rounded-xl bg-success/8 border border-success/20 text-center">
+                <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
+                <p className="font-semibold text-sm text-success">{fmtMoney(advTotal)}</p>
+              </div>
+              <div className={`p-3 rounded-xl text-center border ${balance > 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/8 border-success/20"}`}>
+                <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
+                <p className={`font-semibold text-sm ${balance > 0 ? "text-destructive" : "text-success"}`}>
+                  {balance > 0 ? fmtMoney(balance) : "✓ Cleared"}
+                </p>
+              </div>
+              {shipping > 0 && (
+                <div className="col-span-4 px-1 pt-0.5 text-xs text-muted-foreground">
+                  Order Total (value + shipping): <span className="font-semibold text-foreground">{fmtMoney(total)}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Progress bar */}
-        {order.amount > 0 && (
+        {orderTotal(order) > 0 && (
           <div>
             <div className="flex justify-between text-xs text-muted-foreground mb-1">
               <span>Payment progress</span>
-              <span>{Math.min(100, Math.round(advTotal / order.amount * 100))}%</span>
+              <span>{Math.min(100, Math.round(advTotal / orderTotal(order) * 100))}%</span>
             </div>
             <div className="h-2 rounded-full bg-secondary overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-success to-emerald-400 transition-all"
-                style={{ width: `${Math.min(100, (advTotal / order.amount) * 100)}%` }}
+                style={{ width: `${Math.min(100, (advTotal / orderTotal(order)) * 100)}%` }}
               />
             </div>
           </div>
