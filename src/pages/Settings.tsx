@@ -145,8 +145,8 @@ export function SettingsPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                 <Input
                   type="number" min={0} step={1}
-                  value={(db.settings as any).defaultShippingCharge ?? 0}
-                  onChange={e => setDb({ ...db, settings: { ...db.settings, defaultShippingCharge: Math.max(0, Number(e.target.value)) } as any })}
+                  value={db.settings.defaultShippingCharge ?? 0}
+                  onChange={e => setDb({ ...db, settings: { ...db.settings, defaultShippingCharge: Math.max(0, Number(e.target.value)) } })}
                   className="rounded-xl pl-7"
                 />
               </div>
@@ -161,7 +161,7 @@ export function SettingsPage() {
               ${(
                 (db.settings.diamondRate ?? 3500) * 0.5 +
                 (db.settings.metalRate ?? 65) * 3 +
-                ((db.settings as any).defaultShippingCharge ?? 0)
+                (db.settings.defaultShippingCharge ?? 0)
               ).toLocaleString()}
             </span>
           </div>

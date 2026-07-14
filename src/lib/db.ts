@@ -154,7 +154,7 @@ export function loadDb(): DB {
     // backward-compat: fill missing settings fields
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
     if (db.settings.metalRate == null) db.settings.metalRate = 65;
-    if ((db.settings as any).defaultShippingCharge == null) (db.settings as any).defaultShippingCharge = 0;
+    if (db.settings.defaultShippingCharge == null) db.settings.defaultShippingCharge = 0;
     return db;
   } catch { return emptyDb(); }
 }

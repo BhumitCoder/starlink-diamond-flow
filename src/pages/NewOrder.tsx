@@ -27,7 +27,7 @@ export function NewOrderPage() {
     : [];
   const diamondRate     = initDb.settings.diamondRate             ?? 3500;
   const metalRate       = initDb.settings.metalRate               ?? 65;
-  const defaultShipping = (initDb.settings as any).defaultShippingCharge ?? 0;
+  const defaultShipping = initDb.settings.defaultShippingCharge ?? 0;
 
   const [f, setF] = useState({
     /* client selection (admin/employee only) */
