@@ -37,7 +37,7 @@ export function LoginPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="relative w-full max-w-md">
         <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-luxe p-8 md:p-10">
           <div className="flex flex-col items-center text-center mb-8">
-            <img src="/logo.png" alt="Starlink Jewels" className="h-20 w-auto object-contain mb-4" />
+            <img src="/starlink-logo.png" alt="Starlink Jewels" className="h-20 w-auto object-contain mb-6" />
             <h1 className="font-display text-3xl text-brand-dark">Welcome Back</h1>
             <p className="text-sm text-muted-foreground mt-1">Sign in to the Starlink Jewels client portal</p>
           </div>

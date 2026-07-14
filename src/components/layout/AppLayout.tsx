@@ -46,12 +46,8 @@ export function AppLayout() {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar (desktop) */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r bg-sidebar sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-3">
-          <img src="/logo.png" alt="Starlink" className="h-10 w-10 rounded-xl object-contain bg-white p-1 shadow-soft" />
-          <div className="min-w-0">
-            <p className="font-display text-lg leading-none font-semibold text-brand-dark">Starlink</p>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground mt-0.5">Jewels</p>
-          </div>
+        <div className="px-5 py-5 flex items-center">
+          <img src="/starlink-logo.png" alt="Starlink Jewels" className="h-10 w-auto object-contain" />
         </div>
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {nav.map(item => (
@@ -76,9 +72,8 @@ export function AppLayout() {
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-30 glass border-b px-4 md:px-8 h-16 flex items-center gap-3">
-          <div className="md:hidden flex items-center gap-2">
-            <img src="/logo.png" alt="" className="h-8 w-8 rounded-lg object-contain bg-white p-0.5 shadow-soft" />
-            <span className="font-display font-semibold text-brand-dark">Starlink</span>
+          <div className="md:hidden flex items-center">
+            <img src="/starlink-logo.png" alt="Starlink Jewels" className="h-8 w-auto object-contain" />
           </div>
           <button onClick={() => navigate("/search")} className="ml-auto md:ml-0 md:flex-1 md:max-w-md flex items-center gap-2 px-3 h-10 rounded-xl border bg-white/70 text-sm text-muted-foreground hover:border-primary transition">
             <Search className="h-4 w-4" /> <span className="hidden sm:inline">Search orders, clients…</span>
