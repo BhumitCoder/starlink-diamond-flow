@@ -49,6 +49,14 @@ export interface TimelineEntry {
   photo?: string;
 }
 
+export interface AdvancePayment {
+  id: string;
+  amount: number;
+  note: string;
+  recordedBy: string; // userId
+  createdAt: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -68,6 +76,7 @@ export interface Order {
   assignedEmployeeId?: string;
   estimatedDelivery?: string;
   amount: number;
+  advances: AdvancePayment[];
   timeline: TimelineEntry[];
   createdAt: string;
 }
@@ -134,7 +143,20 @@ export function loadDb(): DB {
     localStorage.setItem(KEY, JSON.stringify(seeded));
     return seeded;
   }
-  try { return JSON.parse(raw) as DB; } catch { return emptyDb(); }
+  try {
+    const db = JSON.parse(raw) as DB;
+    // backward-compat: add advances array to orders that don't have it
+    db.orders = db.orders.map(o => ({ advances: [], ...o }));
+    return db;
+  } catch { return emptyDb(); }
+}
+
+export function totalAdvance(order: Order): number {
+  return (order.advances || []).reduce((s, a) => s + a.amount, 0);
+}
+
+export function balanceDue(order: Order): number {
+  return Math.max(0, order.amount - totalAdvance(order));
 }
 
 export function saveDb(db: DB) {

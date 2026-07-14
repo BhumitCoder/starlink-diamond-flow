@@ -1,10 +1,16 @@
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { loadDb, updateDb, fmtMoney, fmtDate } from "@/lib/db";
+import { loadDb, updateDb, fmtMoney, fmtDate, totalAdvance, balanceDue, uid } from "@/lib/db";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, Circle, Loader2, Package, Download } from "lucide-react";
-import { motion } from "framer-motion";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  ArrowLeft, CheckCircle2, Circle, Loader2, Package, Download,
+  DollarSign, Plus, TrendingUp, AlertCircle, Wallet,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -12,11 +18,21 @@ export function OrderDetailPage() {
   const { id } = useParams();
   const { user } = useAuth();
   const nav = useNavigate();
+
+  // Advance form state
+  const [showAdvForm, setShowAdvForm] = useState(false);
+  const [advAmt, setAdvAmt] = useState("");
+  const [advNote, setAdvNote] = useState("");
+
   const db = loadDb();
   const order = db.orders.find(o => o.id === id);
   if (!order) return <div className="text-center py-20">Order not found. <Link to="/orders" className="text-primary underline">Back</Link></div>;
+
   const client = db.clients.find(c => c.id === order.clientId);
   const employee = db.users.find(u => u.id === order.assignedEmployeeId);
+  const advances = order.advances || [];
+  const advTotal = totalAdvance(order);
+  const balance = balanceDue(order);
 
   const canEditStage = () => user!.role === "admin" || (user!.role === "employee" && order.assignedEmployeeId === user!.id);
 
@@ -50,7 +66,24 @@ export function OrderDetailPage() {
     toast.success(yes ? "Order approved" : "Order rejected");
   };
 
+  const addAdvance = () => {
+    const amt = parseFloat(advAmt);
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    updateDb(d => {
+      const o = d.orders.find(x => x.id === order.id)!;
+      if (!o.advances) o.advances = [];
+      o.advances.push({ id: uid("adv_"), amount: amt, note: advNote || "Advance payment", recordedBy: user!.id, createdAt: new Date().toISOString() });
+      // notify client
+      const clientUser = d.users.find(u => u.clientId === o.clientId);
+      if (clientUser) d.notifications.unshift({ id: uid("n_"), userId: clientUser.id, title: "Advance Recorded", body: `${fmtMoney(amt)} advance received for ${o.orderNumber}`, type: "info", read: false, createdAt: new Date().toISOString() });
+    });
+    toast.success("Advance payment recorded");
+    setAdvAmt(""); setAdvNote(""); setShowAdvForm(false);
+  };
+
   const downloadInvoice = () => {
+    const adv = totalAdvance(order);
+    const bal = balanceDue(order);
     const doc = new jsPDF();
     doc.setFont("helvetica", "bold"); doc.setFontSize(22);
     doc.text("STARLINK JEWELS", 20, 25);
@@ -72,8 +105,14 @@ export function OrderDetailPage() {
     doc.text(String(order.quantity), 130, 118);
     doc.text(fmtMoney(order.amount), 165, 118);
     doc.line(20, 128, 190, 128);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-    doc.text("Total:", 130, 138); doc.text(fmtMoney(order.amount), 165, 138);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+    doc.text("Order Total:", 120, 138); doc.text(fmtMoney(order.amount), 165, 138);
+    if (adv > 0) {
+      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+      doc.text("Advance Paid:", 120, 148); doc.text(`- ${fmtMoney(adv)}`, 165, 148);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
+      doc.text("Balance Due:", 120, 160); doc.text(fmtMoney(bal), 165, 160);
+    }
     doc.setFontSize(9); doc.setFont("helvetica", "italic");
     doc.text("Thank you for choosing Starlink Jewels.", 20, 260);
     doc.save(`Invoice-${order.orderNumber}.pdf`);
@@ -83,17 +122,20 @@ export function OrderDetailPage() {
     <div className="max-w-5xl mx-auto space-y-5">
       <button onClick={() => nav(-1)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /> Back</button>
 
+      {/* Order Header */}
       <div className="card-luxe p-6">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center"><Package className="h-7 w-7 text-primary" /></div>
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center">
+              <Package className="h-7 w-7 text-primary" />
+            </div>
             <div>
               <p className="text-xs text-muted-foreground">{order.orderNumber}</p>
               <h1 className="font-display text-2xl md:text-3xl text-brand-dark">{order.jewelleryType} in {order.metal}</h1>
               <p className="text-sm text-muted-foreground mt-1">{client?.companyName} · {order.contactPerson}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={order.status} />
             <Button variant="outline" onClick={downloadInvoice} className="rounded-xl"><Download className="h-4 w-4 mr-2" />Invoice</Button>
           </div>
@@ -114,7 +156,12 @@ export function OrderDetailPage() {
           ))}
         </div>
 
-        {order.instructions && <div className="mt-4 p-3 rounded-xl bg-secondary text-sm"><p className="text-xs text-muted-foreground mb-1">Special Instructions</p>{order.instructions}</div>}
+        {order.instructions && (
+          <div className="mt-4 p-3 rounded-xl bg-secondary text-sm">
+            <p className="text-xs text-muted-foreground mb-1">Special Instructions</p>
+            {order.instructions}
+          </div>
+        )}
 
         {user!.role === "admin" && order.status === "Waiting" && (
           <div className="mt-5 flex gap-3">
@@ -124,6 +171,154 @@ export function OrderDetailPage() {
         )}
       </div>
 
+      {/* ── Advance Payment Card ── */}
+      <div className="card-luxe p-6 space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-success/10 grid place-items-center">
+              <Wallet className="h-5 w-5 text-success" />
+            </div>
+            <div>
+              <h3 className="font-display text-lg text-brand-dark">Advance Payments</h3>
+              <p className="text-xs text-muted-foreground">{advances.length} payment{advances.length !== 1 ? "s" : ""} recorded</p>
+            </div>
+          </div>
+          {user!.role === "admin" && (
+            <Button size="sm" onClick={() => setShowAdvForm(v => !v)} className="btn-hero rounded-xl gap-2">
+              <Plus className="h-4 w-4" /> Add Advance
+            </Button>
+          )}
+        </div>
+
+        {/* Summary strip */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-3 rounded-xl bg-secondary text-center">
+            <p className="text-xs text-muted-foreground mb-1">Order Total</p>
+            <p className="font-semibold text-sm">{fmtMoney(order.amount)}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-success/8 border border-success/20 text-center">
+            <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
+            <p className="font-semibold text-sm text-success">{fmtMoney(advTotal)}</p>
+          </div>
+          <div className={`p-3 rounded-xl text-center border ${balance > 0 ? "bg-destructive/5 border-destructive/20" : "bg-success/8 border-success/20"}`}>
+            <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
+            <p className={`font-semibold text-sm ${balance > 0 ? "text-destructive" : "text-success"}`}>
+              {balance > 0 ? fmtMoney(balance) : "✓ Cleared"}
+            </p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {order.amount > 0 && (
+          <div>
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>Payment progress</span>
+              <span>{Math.min(100, Math.round(advTotal / order.amount * 100))}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-secondary overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-success to-emerald-400 transition-all"
+                style={{ width: `${Math.min(100, (advTotal / order.amount) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Add advance form */}
+        <AnimatePresence>
+          {showAdvForm && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-2 border-t border-border/60 space-y-3">
+                <p className="text-sm font-medium text-brand-dark">Record New Advance</p>
+                <div className="grid md:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Amount ($)</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="number" min="1" step="0.01"
+                        value={advAmt} onChange={e => setAdvAmt(e.target.value)}
+                        className="pl-9 rounded-xl h-10"
+                        placeholder="0.00"
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Payment Note</Label>
+                    <Input
+                      value={advNote} onChange={e => setAdvNote(e.target.value)}
+                      className="rounded-xl h-10"
+                      placeholder="e.g. Cash, Bank transfer, Cheque #"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={addAdvance} className="btn-hero rounded-xl">Save Payment</Button>
+                  <Button size="sm" variant="outline" onClick={() => { setShowAdvForm(false); setAdvAmt(""); setAdvNote(""); }} className="rounded-xl">Cancel</Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Advance ledger */}
+        {advances.length > 0 ? (
+          <div className="space-y-2 pt-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Payment History</p>
+            {advances.map((a, i) => {
+              const recorder = db.users.find(u => u.id === a.recordedBy);
+              return (
+                <motion.div
+                  key={a.id}
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center justify-between gap-3 p-3 rounded-xl bg-secondary/50 border border-border/40"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="h-8 w-8 rounded-lg bg-success/15 grid place-items-center shrink-0">
+                      <TrendingUp className="h-4 w-4 text-success" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{a.note}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {fmtDate(a.createdAt)} · by {recorder?.name || "Admin"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="font-semibold text-success shrink-0">{fmtMoney(a.amount)}</p>
+                </motion.div>
+              );
+            })}
+
+            {/* Running total row */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-2">
+                {balance <= 0
+                  ? <CheckCircle2 className="h-4 w-4 text-success" />
+                  : <AlertCircle className="h-4 w-4 text-warning-foreground" />}
+                <span className="text-sm font-semibold">{balance <= 0 ? "Fully paid" : "Outstanding balance"}</span>
+              </div>
+              <span className={`font-bold ${balance > 0 ? "text-destructive" : "text-success"}`}>
+                {balance > 0 ? fmtMoney(balance) : "Cleared"}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="py-6 text-center text-muted-foreground">
+            <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">No advance payments recorded yet.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Production Timeline */}
       <div className="card-luxe p-6">
         <h3 className="font-display text-xl text-brand-dark mb-5">Production Timeline</h3>
         <div className="relative pl-8 space-y-4">

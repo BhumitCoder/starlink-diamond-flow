@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { loadDb, fmtMoney, fmtDate } from "@/lib/db";
+import { loadDb, fmtMoney, fmtDate, totalAdvance, balanceDue } from "@/lib/db";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -254,6 +254,8 @@ export function ClientHistoryPage() {
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Priority</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground">Status</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Amount</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Advance</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Balance</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Invoice</th>
                 <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground">Date</th>
                 <th className="px-4 py-3" />
@@ -263,6 +265,8 @@ export function ClientHistoryPage() {
               {filtered.map((o, i) => {
                 const invoice = allInvoices.find(inv => inv.orderId === o.id);
                 const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
+                const adv = totalAdvance(o);
+                const bal = balanceDue(o);
                 return (
                   <motion.tr key={o.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
                     className="border-b border-border/40 hover:bg-secondary/20 transition-colors group">
@@ -284,6 +288,16 @@ export function ClientHistoryPage() {
                     </td>
                     <td className="px-4 py-3.5"><StatusBadge status={o.status} /></td>
                     <td className="px-4 py-3.5 text-right font-semibold">{fmtMoney(o.amount)}</td>
+                    <td className="px-4 py-3.5 text-right">
+                      {adv > 0
+                        ? <span className="text-success font-medium text-xs">{fmtMoney(adv)}</span>
+                        : <span className="text-muted-foreground text-xs">—</span>}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <span className={`text-xs font-semibold ${bal === 0 ? "text-success" : "text-destructive"}`}>
+                        {bal === 0 ? "✓ Cleared" : fmtMoney(bal)}
+                      </span>
+                    </td>
                     <td className="px-4 py-3.5 text-right">
                       {invoice ? (
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${invoice.paid ? "bg-success/10 text-success border-success/30" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
@@ -313,6 +327,8 @@ export function ClientHistoryPage() {
           {filtered.map(o => {
             const invoice = allInvoices.find(inv => inv.orderId === o.id);
             const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
+            const adv = totalAdvance(o);
+            const bal = balanceDue(o);
             return (
               <Link key={o.id} to={`/orders/${o.id}`} className="flex items-start gap-3 p-4 hover:bg-secondary/20 transition-colors">
                 <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center shrink-0">
@@ -330,6 +346,10 @@ export function ClientHistoryPage() {
                   <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
                     <span>{progress}% · {fmtDate(o.createdAt)}</span>
                     <div className="flex items-center gap-2">
+                      {adv > 0 && <span className="text-success font-medium">Adv {fmtMoney(adv)}</span>}
+                      {bal > 0
+                        ? <span className="text-destructive font-semibold">Bal {fmtMoney(bal)}</span>
+                        : adv > 0 ? <span className="text-success font-semibold">✓ Cleared</span> : null}
                       {invoice && (
                         <span className={`font-medium ${invoice.paid ? "text-success" : "text-destructive"}`}>
                           {invoice.paid ? "Paid" : "Unpaid"}
@@ -353,11 +373,17 @@ export function ClientHistoryPage() {
 
         {/* Table footer with totals */}
         {filtered.length > 0 && (
-          <div className="px-5 py-3 bg-secondary/30 border-t border-border/60 flex items-center justify-between text-sm flex-wrap gap-2">
+          <div className="px-5 py-3 bg-secondary/30 border-t border-border/60 flex items-center justify-between text-sm flex-wrap gap-3">
             <span className="text-muted-foreground">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
-            <span className="font-semibold">
-              Total: {fmtMoney(filtered.reduce((s, o) => s + o.amount, 0))}
-            </span>
+            <div className="flex items-center gap-4">
+              <span className="text-muted-foreground">Total <span className="font-semibold text-foreground">{fmtMoney(filtered.reduce((s, o) => s + o.amount, 0))}</span></span>
+              {filtered.some(o => (o.advances||[]).length > 0) && (
+                <>
+                  <span className="text-muted-foreground">Advance <span className="font-semibold text-success">{fmtMoney(filtered.reduce((s, o) => s + totalAdvance(o), 0))}</span></span>
+                  <span className="text-muted-foreground">Balance <span className={`font-semibold ${filtered.reduce((s,o)=>s+balanceDue(o),0)>0?"text-destructive":"text-success"}`}>{fmtMoney(filtered.reduce((s, o) => s + balanceDue(o), 0))}</span></span>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
