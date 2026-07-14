@@ -9,6 +9,10 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Plus, Mail, Phone, MapPin, Search, Trash2, Package, History } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/PaginationBar";
+
+const PAGE_SIZE = 9;
 
 export function ClientsPage() {
   const { user } = useAuth();
@@ -24,6 +28,8 @@ export function ClientsPage() {
     c.companyName.toLowerCase().includes(q.toLowerCase()) ||
     c.ownerName.toLowerCase().includes(q.toLowerCase())
   );
+
+  const { paged, page, setPage, totalPages, total, start, end } = usePagination(list, PAGE_SIZE);
 
   const create = () => {
     if (!f.companyName || !f.username || !f.password) { toast.error("Fill required fields"); return; }
@@ -65,7 +71,7 @@ export function ClientsPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl text-brand-dark">Clients</h1>
-          <p className="text-sm text-muted-foreground">{list.length} clients</p>
+          <p className="text-sm text-muted-foreground">{total} client{total !== 1 ? "s" : ""}</p>
         </div>
         {user!.role === "admin" && (
           <Dialog open={open} onOpenChange={setOpen}>
@@ -99,7 +105,7 @@ export function ClientsPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {list.map(c => {
+        {paged.map(c => {
           const orderCount = db.orders.filter(o => o.clientId === c.id).length;
           const activeCount = db.orders.filter(o => o.clientId === c.id && !["Delivered","Rejected"].includes(o.status)).length;
           return (
@@ -124,7 +130,6 @@ export function ClientsPage() {
                 </p>
               </div>
 
-              {/* Order count pills */}
               <div className="flex items-center gap-2 mt-4">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-secondary px-2.5 py-1 rounded-full">
                   <Package className="h-3.5 w-3.5" /> {orderCount} total
@@ -136,7 +141,6 @@ export function ClientsPage() {
                 )}
               </div>
 
-              {/* View History button */}
               <div className="mt-3 pt-3 border-t border-border/50">
                 <Button asChild variant="outline" size="sm" className="w-full rounded-xl gap-2 font-medium">
                   <Link to={`/clients/${c.id}`}>
@@ -159,9 +163,18 @@ export function ClientsPage() {
             </div>
           );
         })}
-        {list.length === 0 && (
+        {total === 0 && (
           <div className="col-span-full card-luxe p-12 text-center text-muted-foreground">No clients found.</div>
         )}
+      </div>
+
+      <div className="card-luxe px-4 py-1">
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          label={total > 0 ? `Showing ${start + 1}–${end} of ${total} clients` : undefined}
+        />
       </div>
     </div>
   );

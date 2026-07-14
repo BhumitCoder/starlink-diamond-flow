@@ -7,28 +7,40 @@ import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Package, Plus, Search, Filter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationBar } from "@/components/PaginationBar";
+
+const PAGE_SIZE = 10;
 
 export function OrdersPage() {
   const { user } = useAuth();
   const db = loadDb();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
+
   const orders = useMemo(() => {
     let list = currentUserOrders(db, user!);
     if (status !== "all") list = list.filter(o => o.status === status);
-    if (q) list = list.filter(o => o.orderNumber.toLowerCase().includes(q.toLowerCase()) || o.jewelleryType.toLowerCase().includes(q.toLowerCase()));
+    if (q) list = list.filter(o =>
+      o.orderNumber.toLowerCase().includes(q.toLowerCase()) ||
+      o.jewelleryType.toLowerCase().includes(q.toLowerCase())
+    );
     return list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [db, user, q, status]);
+
+  const { paged, page, setPage, totalPages, total, start, end } = usePagination(orders, PAGE_SIZE);
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-3xl text-brand-dark">Orders</h1>
-          <p className="text-sm text-muted-foreground">{orders.length} order{orders.length !== 1 ? "s" : ""}</p>
+          <p className="text-sm text-muted-foreground">{total} order{total !== 1 ? "s" : ""}</p>
         </div>
         {(user!.role === "client" || user!.role === "admin") && (
-          <Button asChild className="btn-hero h-11 rounded-xl px-5"><Link to="/orders/new"><Plus className="h-4 w-4 mr-2" />New Order</Link></Button>
+          <Button asChild className="btn-hero h-11 rounded-xl px-5">
+            <Link to="/orders/new"><Plus className="h-4 w-4 mr-2" />New Order</Link>
+          </Button>
         )}
       </div>
 
@@ -41,13 +53,15 @@ export function OrdersPage() {
           <SelectTrigger className="w-48 h-11 rounded-xl"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
-            {["Waiting","Approved","In Production","Ready","Dispatched","Delivered","Rejected"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            {["Waiting","Approved","In Production","Ready","Dispatched","Delivered","Rejected"].map(s =>
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
 
       <div className="grid gap-3">
-        {orders.map(o => {
+        {paged.map(o => {
           const client = db.clients.find(c => c.id === o.clientId);
           const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
           return (
@@ -82,7 +96,18 @@ export function OrdersPage() {
             </Link>
           );
         })}
-        {orders.length === 0 && <div className="card-luxe p-12 text-center text-muted-foreground">No orders match your filters.</div>}
+        {total === 0 && (
+          <div className="card-luxe p-12 text-center text-muted-foreground">No orders match your filters.</div>
+        )}
+      </div>
+
+      <div className="card-luxe px-4 py-1">
+        <PaginationBar
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          label={total > 0 ? `Showing ${start + 1}–${end} of ${total} orders` : undefined}
+        />
       </div>
     </div>
   );
