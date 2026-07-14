@@ -87,7 +87,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-background flex">
       {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r bg-sidebar sticky top-0 h-screen">
+      <aside className="hidden md:flex shrink-0 flex-col border-r bg-sidebar sticky top-0 h-screen" style={{ width: '16rem', minWidth: '16rem' }}>
         <div className="px-5 py-5 flex items-center">
           <img src="/starlink-logo.png" alt="Starlink Jewels" className="h-10 w-auto object-contain" />
         </div>
