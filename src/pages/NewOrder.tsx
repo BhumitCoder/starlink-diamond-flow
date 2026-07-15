@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { loadDb, updateDb, uid, TIMELINE_STEPS, type Order } from "@/lib/db";
@@ -11,7 +11,33 @@ import {
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { DollarSign, Building2 } from "lucide-react";
+import { DollarSign, Building2, ImagePlus, X, Gem } from "lucide-react";
+
+/** Compress a File to a base64 JPEG ≤800px, quality 0.75 */
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = e => {
+      const img = new Image();
+      img.onerror = reject;
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else       { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 export function NewOrderPage() {
   const { user } = useAuth();
@@ -44,6 +70,12 @@ export function NewOrderPage() {
     expectedDelivery: "",
     priority: "Normal",
 
+    /* product specifications */
+    designNumber: "",
+    productSize: "",
+    productColor: "",
+    productKarats: "",
+
     /* order value — editable, pre-seeded from auto-calc */
     orderValue: Math.round(0.5 * diamondRate + 3 * metalRate),
     valueManuallySet: false,
@@ -56,7 +88,23 @@ export function NewOrderPage() {
     advanceNote: "",
   });
 
+  const [images, setImages] = useState<string[]>([]); // up to 3 base64 images
+  const imgRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+
+  const handleImageFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const remaining = 3 - images.length;
+    if (remaining <= 0) { toast.error("Maximum 3 images allowed"); return; }
+    const toProcess = Array.from(files).slice(0, remaining);
+    try {
+      const compressed = await Promise.all(toProcess.map(compressImage));
+      setImages(prev => [...prev, ...compressed].slice(0, 3));
+    } catch { toast.error("Failed to process image"); }
+  };
+
+  const removeImage = (idx: number) =>
+    setImages(prev => prev.filter((_, i) => i !== idx));
 
   /* auto-update order value when weights change (unless user manually typed it) */
   useEffect(() => {
@@ -116,7 +164,11 @@ export function NewOrderPage() {
         quantity: Number(f.quantity),
         diamondWeight: Number(f.diamondWeight),
         metalWeight: Number(f.metalWeight),
-        images: [],
+        images,
+        designNumber: f.designNumber || undefined,
+        productSize: f.productSize || undefined,
+        productColor: f.productColor || undefined,
+        productKarats: f.productKarats || undefined,
         instructions: f.instructions,
         expectedDelivery: f.expectedDelivery || new Date(Date.now() + 45 * 86400000).toISOString(),
         priority: f.priority as Order["priority"],
@@ -306,6 +358,110 @@ export function NewOrderPage() {
               rows={3} className="rounded-xl"
               placeholder="Design notes, stone preferences, reference details" />
           </Field>
+        </div>
+
+        {/* ── Reference Images ── */}
+        <div className="card-luxe p-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+              <ImagePlus className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-brand-dark">Reference Images</h2>
+              <p className="text-xs text-muted-foreground">Upload up to 3 design or reference photos</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            {images.map((src, i) => (
+              <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-border">
+                <img src={src} alt={`Ref ${i + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 h-6 w-6 rounded-full bg-destructive text-white grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            {images.length < 3 && (
+              <button
+                type="button"
+                onClick={() => imgRef.current?.click()}
+                className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground"
+              >
+                <ImagePlus className="h-6 w-6" />
+                <span className="text-xs">{images.length === 0 ? "Add Image" : "Add More"}</span>
+              </button>
+            )}
+          </div>
+
+          <input
+            ref={imgRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={e => handleImageFiles(e.target.files)}
+          />
+          <p className="text-xs text-muted-foreground">Accepted: JPG, PNG, WEBP · Each compressed to ≤800px</p>
+        </div>
+
+        {/* ── Product Specifications ── */}
+        <div className="card-luxe p-6 space-y-5">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 grid place-items-center shrink-0">
+              <Gem className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-brand-dark">Product Specifications</h2>
+              <p className="text-xs text-muted-foreground">Design details for manufacturing</p>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Design Number">
+              <Input
+                value={f.designNumber}
+                onChange={e => set("designNumber", e.target.value)}
+                className="rounded-xl h-11"
+                placeholder="e.g. SL-2024-001"
+              />
+            </Field>
+
+            <Field label="Color of Product">
+              <Select value={f.productColor} onValueChange={v => set("productColor", v)}>
+                <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select color…" /></SelectTrigger>
+                <SelectContent>
+                  {["Yellow", "Rose", "White"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Karats of Product">
+              <Select value={f.productKarats} onValueChange={v => set("productKarats", v)}>
+                <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select karats…" /></SelectTrigger>
+                <SelectContent>
+                  {["14K", "18K", "22K", "24K"].map(x =>
+                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <div className="space-y-1.5 md:col-span-2">
+              <Field label="Product Size">
+                <Input
+                  value={f.productSize}
+                  onChange={e => set("productSize", e.target.value)}
+                  className="rounded-xl h-11"
+                  placeholder="e.g. Ring size 7, Bracelet 18cm, Chain 20 inches"
+                />
+              </Field>
+              <p className="text-xs text-muted-foreground pl-0.5">Note: Any Ring Size, Bracelet Size or Chain Details Please Mention Here</p>
+            </div>
+          </div>
         </div>
 
         {/* ── Order Value ── */}

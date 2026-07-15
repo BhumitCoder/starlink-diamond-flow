@@ -68,7 +68,7 @@ export interface Order {
   quantity: number;
   diamondWeight: number;
   metalWeight: number;
-  images: string[];
+  images: string[];          // up to 3 reference images (base64)
   instructions: string;
   expectedDelivery: string;
   priority: "Normal" | "Urgent" | "High Priority";
@@ -80,6 +80,16 @@ export interface Order {
   advances: AdvancePayment[];
   timeline: TimelineEntry[];
   createdAt: string;
+  // Product specifications
+  designNumber?: string;
+  productSize?: string;
+  productColor?: string;   // "Yellow" | "Rose" | "White"
+  productKarats?: string;  // "14K" | "18K" | "22K" | "24K"
+  // CAD design image (uploaded after CAD Approved step)
+  cadImage?: string;
+  // Dispatch info
+  courierName?: string;
+  trackingNumber?: string;
 }
 
 export interface Message {
