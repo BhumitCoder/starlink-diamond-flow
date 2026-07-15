@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle, ListTodo } from "lucide-react";
+import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle, ListTodo, MoreHorizontal, X, ChevronRight, Search as SearchIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadDb } from "@/lib/db";
@@ -19,12 +19,23 @@ const NAV: NavItem[] = [
   { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
 ];
 
+/* Main 4 tabs always visible on mobile */
 const MOBILE_NAV: NavItem[] = [
   { to: "/", label: "Home", icon: LayoutDashboard },
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/messages", label: "Chat", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
-  { to: "/profile", label: "Me", icon: User },
+];
+
+/* Items shown inside the "More" drawer */
+const MORE_NAV: NavItem[] = [
+  { to: "/invoices", label: "Invoices", icon: FileText },
+  { to: "/clients", label: "Clients", icon: Users, roles: ["admin","employee"] },
+  { to: "/employees", label: "Employees", icon: Briefcase, roles: ["admin"] },
+  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
+  { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
+  { to: "/search", label: "Search", icon: SearchIcon },
+  { to: "/profile", label: "My Profile", icon: User },
 ];
 
 /* Map routes → page titles */
@@ -49,6 +60,17 @@ const ROLE_LABEL: Record<string, string> = {
   client: "Client",
 };
 
+/* Color map for More drawer icons */
+const ICON_COLORS: Record<string, string> = {
+  "/invoices":   "bg-blue-500/15 text-blue-600",
+  "/clients":    "bg-violet-500/15 text-violet-600",
+  "/employees":  "bg-orange-500/15 text-orange-600",
+  "/reports":    "bg-emerald-500/15 text-emerald-600",
+  "/settings":   "bg-slate-500/15 text-slate-600",
+  "/search":     "bg-primary/15 text-primary",
+  "/profile":    "bg-brand-dark/15 text-brand-dark",
+};
+
 export function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -56,6 +78,7 @@ export function AppLayout() {
   const [unread, setUnread] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [pendingTasks, setPendingTasks] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -81,15 +104,26 @@ export function AppLayout() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  /* Close More drawer when route changes */
+  useEffect(() => { setMoreOpen(false); }, [loc.pathname]);
+
   const nav = NAV.filter(n => !n.roles || n.roles.includes(user!.role));
+  const moreNav = MORE_NAV.filter(n => !n.roles || n.roles.includes(user!.role));
   const canCreateOrder = user?.role === "client" || user?.role === "admin";
 
   /* Resolve page title — handle dynamic segments like /orders/:id */
   const pageTitle = PAGE_TITLES[loc.pathname] ??
     (loc.pathname.startsWith("/orders/") ? "Order Detail" :
-     loc.pathname.startsWith("/clients/") ? "Client History" : "");
+     loc.pathname.startsWith("/clients/") ? "Client History" :
+     loc.pathname.startsWith("/employees/") ? "Employee Detail" : "");
 
   const initials = user?.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() ?? "?";
+
+  /* Is the current path one of the More items? (highlight "More" tab) */
+  const isMoreActive = moreNav.some(item => {
+    if (item.to === "/") return loc.pathname === "/";
+    return loc.pathname === item.to || loc.pathname.startsWith(item.to + "/");
+  });
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -249,19 +283,36 @@ export function AppLayout() {
           <Outlet />
         </motion.main>
 
-        {/* ── Bottom nav (mobile) ── */}
+        {/* ── Bottom nav (mobile) — 5 items: 4 tabs + More ── */}
         <nav
-          className="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t px-2 py-2 flex items-center justify-around"
-          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" }}>
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 glass border-t flex items-center justify-around"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)", paddingTop: "0.5rem" }}>
+
           {MOBILE_NAV.map(item => (
             <NavLink key={item.to} to={item.to} end={item.to === "/"}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-[10px] font-medium transition
+                `flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-[10px] font-medium transition relative
                  ${isActive ? "text-primary" : "text-muted-foreground"}`}>
-              <item.icon className="h-5 w-5" />
+              <div className="relative">
+                <item.icon className="h-5 w-5" />
+                {item.to === "/notifications" && unread > 0 && (
+                  <span className="absolute -top-1 -right-1.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold grid place-items-center leading-none">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </div>
               {item.label}
             </NavLink>
           ))}
+
+          {/* More button */}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-[10px] font-medium transition
+              ${isMoreActive ? "text-primary" : "text-muted-foreground"}`}>
+            <MoreHorizontal className="h-5 w-5" />
+            More
+          </button>
         </nav>
 
         {/* ── FAB (mobile) ── */}
@@ -316,6 +367,104 @@ export function AppLayout() {
           onClose={() => setTasksOpen(false)}
         />
       )}
+
+      {/* ── More Drawer (mobile) ── */}
+      <AnimatePresence>
+        {moreOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="more-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              onClick={() => setMoreOpen(false)}
+            />
+
+            {/* Drawer */}
+            <motion.div
+              key="more-drawer"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl overflow-hidden"
+              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+            >
+              {/* Handle bar */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="h-1 w-10 rounded-full bg-border" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
+                <div>
+                  <p className="font-display text-lg text-brand-dark">More</p>
+                  <p className="text-xs text-muted-foreground capitalize">{user?.name} · {user?.role}</p>
+                </div>
+                <button
+                  onClick={() => setMoreOpen(false)}
+                  className="h-8 w-8 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* User avatar strip */}
+              <div className="px-5 py-4 flex items-center gap-3 bg-secondary/30">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white text-base font-bold grid place-items-center shrink-0 shadow-soft">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-brand-dark truncate">{user?.name}</p>
+                  <p className="text-xs text-muted-foreground">{ROLE_LABEL[user?.role ?? ""] ?? user?.role}</p>
+                </div>
+              </div>
+
+              {/* Nav items grid */}
+              <div className="px-4 pt-4 pb-2">
+                <div className="grid grid-cols-4 gap-3">
+                  {moreNav.map(item => {
+                    const isActive = loc.pathname === item.to || (item.to !== "/" && loc.pathname.startsWith(item.to + "/"));
+                    const colorClass = ICON_COLORS[item.to] || "bg-primary/15 text-primary";
+                    return (
+                      <button
+                        key={item.to}
+                        onClick={() => { navigate(item.to); setMoreOpen(false); }}
+                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95
+                          ${isActive ? "bg-primary/10 ring-2 ring-primary/20" : "hover:bg-secondary/60"}`}
+                      >
+                        <div className={`h-12 w-12 rounded-2xl grid place-items-center ${colorClass}`}>
+                          <item.icon className="h-6 w-6" />
+                        </div>
+                        <span className={`text-[11px] font-medium text-center leading-tight ${isActive ? "text-primary" : "text-foreground"}`}>
+                          {item.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Divider + Sign out */}
+              <div className="mx-4 mt-3 pt-3 border-t border-border/60">
+                <button
+                  onClick={() => { logout(); navigate("/login"); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <div className="h-10 w-10 rounded-xl bg-destructive/10 grid place-items-center shrink-0">
+                    <LogOut className="h-5 w-5" />
+                  </div>
+                  <span className="font-medium">Sign Out</span>
+                  <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
