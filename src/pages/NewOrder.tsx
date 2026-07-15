@@ -49,8 +49,10 @@ export function NewOrderPage() {
 
   /* load clients list + pricing rates from settings */
   const initDb          = loadDb();
-  const allClients      = isAdmin || isEmployee
+  const allClients      = isAdmin
     ? initDb.clients.filter(c => c.status === "active")
+    : isEmployee
+    ? initDb.clients.filter(c => c.status === "active" && c.accountManagerId === user!.id)
     : [];
   const diamondRate     = initDb.settings.diamondRate             ?? 3500;
   const metalRate       = initDb.settings.metalRate               ?? 65;

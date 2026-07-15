@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Mail, Phone, MapPin, Search, Trash2, Package, History, Printer } from "lucide-react";
+import { Plus, Mail, Phone, MapPin, Search, Trash2, Package, History, Printer, UserCog } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { usePagination } from "@/hooks/usePagination";
@@ -132,7 +133,14 @@ export function ClientsPage() {
     country: "USA", zip: "", gstVat: "", address: "", username: "", password: "",
   });
 
-  const list = db.clients.filter(c =>
+  const employees = db.users.filter(u => u.role === "employee");
+
+  // Employee: only their own assigned clients. Admin: everyone.
+  const scoped = user!.role === "employee"
+    ? db.clients.filter(c => c.accountManagerId === user!.id)
+    : db.clients;
+
+  const list = scoped.filter(c =>
     c.companyName.toLowerCase().includes(q.toLowerCase()) ||
     c.ownerName.toLowerCase().includes(q.toLowerCase())
   );
@@ -150,9 +158,9 @@ export function ClientsPage() {
         status: "active", clientId: id, createdAt: new Date().toISOString(),
       });
     });
-    toast.success("Client created");
+    toast.success(`Client created${f.accountManagerId ? "" : " · handled by Admin"}`);
     setOpen(false);
-    setF({ companyName: "", ownerName: "", email: "", phone: "", country: "USA", zip: "", gstVat: "", address: "", username: "", password: "" });
+    setF({ companyName: "", ownerName: "", email: "", phone: "", country: "USA", zip: "", gstVat: "", address: "", username: "", password: "", accountManagerId: undefined });
   };
 
   const toggle = (c: Client) => {
@@ -203,7 +211,23 @@ export function ClientsPage() {
                   </div>
                 ))}
               </div>
-              <Button onClick={create} className="btn-hero rounded-xl mt-2">Create Client</Button>
+              <div className="mt-3">
+                <Label className="text-xs">Assign Employee (optional)</Label>
+                <Select
+                  value={f.accountManagerId || "__none"}
+                  onValueChange={v => setF({ ...f, accountManagerId: v === "__none" ? undefined : v })}
+                >
+                  <SelectTrigger className="rounded-xl mt-1"><SelectValue placeholder="Not selected — you (Admin) will handle this client" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Not selected — Admin handles this client</SelectItem>
+                    {employees.map(e => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  If no employee is selected, this client stays under Admin. Otherwise the selected employee gets full access to this client only.
+                </p>
+              </div>
+              <Button onClick={create} className="btn-hero rounded-xl mt-3">Create Client</Button>
             </DialogContent>
           </Dialog>
         )}
@@ -218,6 +242,7 @@ export function ClientsPage() {
         {paged.map(c => {
           const orderCount = db.orders.filter(o => o.clientId === c.id).length;
           const activeCount = db.orders.filter(o => o.clientId === c.id && !["Delivered","Rejected"].includes(o.status)).length;
+          const manager = employees.find(e => e.id === c.accountManagerId);
           return (
             <div key={c.id} className="card-luxe p-5 flex flex-col">
               <div className="flex items-start justify-between gap-2">
@@ -227,6 +252,13 @@ export function ClientsPage() {
                 </div>
                 <StatusBadge status={c.status} />
               </div>
+
+              {user!.role === "admin" && (
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-2">
+                  <UserCog className="h-3.5 w-3.5" />
+                  {manager ? <>Handled by <span className="font-medium text-foreground">{manager.name}</span></> : "Handled by Admin"}
+                </p>
+              )}
 
               <div className="mt-4 space-y-2 text-sm">
                 <p className="flex items-center gap-2 text-muted-foreground truncate">

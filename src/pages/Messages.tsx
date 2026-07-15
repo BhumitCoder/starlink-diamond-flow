@@ -10,11 +10,16 @@ export function MessagesPage() {
   const [db, setDb] = useState(loadDb());
   useEffect(() => { const h = () => setDb(loadDb()); window.addEventListener("starlink-db-updated", h); return () => window.removeEventListener("starlink-db-updated", h); }, []);
 
+  // Client: only Admin(s) + the employee assigned to their account (if any).
+  // Employee: only Admin(s) + the clients assigned to them.
+  // Admin: everyone.
+  const myClient = user!.role === "client" ? db.clients.find(c => c.id === user!.clientId) : undefined;
+
   const contacts = user!.role === "admin"
     ? [...db.users.filter(u => u.id !== user!.id)]
     : user!.role === "client"
-    ? db.users.filter(u => u.role === "admin" || u.role === "employee")
-    : db.users.filter(u => u.role === "admin" || u.role === "client");
+    ? db.users.filter(u => u.role === "admin" || (u.role === "employee" && u.id === myClient?.accountManagerId))
+    : db.users.filter(u => u.role === "admin" || (u.role === "client" && db.clients.find(c => c.id === u.clientId)?.accountManagerId === user!.id));
 
   const [selected, setSelected] = useState<string | null>(contacts[0]?.id || null);
   const [text, setText] = useState("");

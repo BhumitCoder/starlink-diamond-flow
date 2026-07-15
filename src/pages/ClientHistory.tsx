@@ -14,17 +14,21 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import jsPDF from "jspdf";
+import { useAuth } from "@/lib/auth";
 
 export function ClientHistoryPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const db = loadDb();
 
   const client = db.clients.find(c => c.id === id);
-  if (!client) {
+  // Employees may only open clients assigned to them — not the whole client base.
+  const forbidden = client && user!.role === "employee" && client.accountManagerId !== user!.id;
+  if (!client || forbidden) {
     return (
       <div className="text-center py-20 text-muted-foreground">
-        Client not found.{" "}
+        {forbidden ? "You don't have access to this client." : "Client not found."}{" "}
         <Link to="/clients" className="text-primary underline">Back to Clients</Link>
       </div>
     );

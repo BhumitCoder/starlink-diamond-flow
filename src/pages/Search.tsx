@@ -1,15 +1,23 @@
 import { useState } from "react";
 import { loadDb } from "@/lib/db";
+import { useAuth } from "@/lib/auth";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { Package, Users, Briefcase, FileText } from "lucide-react";
 
 export function SearchPage() {
+  const { user } = useAuth();
   const [q, setQ] = useState("");
   const db = loadDb();
   const ql = q.toLowerCase();
   const orders = q ? db.orders.filter(o => o.orderNumber.toLowerCase().includes(ql) || o.jewelleryType.toLowerCase().includes(ql)).slice(0, 8) : [];
-  const clients = q ? db.clients.filter(c => c.companyName.toLowerCase().includes(ql) || c.ownerName.toLowerCase().includes(ql)).slice(0, 8) : [];
+  // Employees only search their own assigned clients; clients don't search the client list at all.
+  const scopedClients = user!.role === "employee"
+    ? db.clients.filter(c => c.accountManagerId === user!.id)
+    : user!.role === "admin"
+    ? db.clients
+    : [];
+  const clients = q ? scopedClients.filter(c => c.companyName.toLowerCase().includes(ql) || c.ownerName.toLowerCase().includes(ql)).slice(0, 8) : [];
   const employees = q ? db.users.filter(u => u.role === "employee" && (u.name.toLowerCase().includes(ql) || (u.department || "").toLowerCase().includes(ql))).slice(0, 8) : [];
   const invoices = q ? db.invoices.filter(i => i.number.toLowerCase().includes(ql)).slice(0, 8) : [];
 
