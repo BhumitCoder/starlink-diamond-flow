@@ -45,7 +45,7 @@ export function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="reports" element={<Protected roles={["admin"]}><ReportsPage /></Protected>} />
           <Route path="search" element={<SearchPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings" element={<Protected roles={["admin","employee"]}><SettingsPage /></Protected>} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

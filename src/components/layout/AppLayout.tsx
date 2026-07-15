@@ -16,7 +16,7 @@ const NAV: NavItem[] = [
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
-  { to: "/settings", label: "Settings", icon: Settings },
+  { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
 ];
 
 const MOBILE_NAV: NavItem[] = [
@@ -219,11 +219,13 @@ export function AppLayout() {
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-foreground hover:bg-secondary transition-colors text-left">
                       <UserCircle className="h-4 w-4 text-muted-foreground" /> My Profile
                     </button>
-                    <button
-                      onClick={() => { setProfileOpen(false); navigate("/settings"); }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-foreground hover:bg-secondary transition-colors text-left">
-                      <Settings className="h-4 w-4 text-muted-foreground" /> Settings
-                    </button>
+                    {user?.role !== "client" && (
+                      <button
+                        onClick={() => { setProfileOpen(false); navigate("/settings"); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-foreground hover:bg-secondary transition-colors text-left">
+                        <Settings className="h-4 w-4 text-muted-foreground" /> Settings
+                      </button>
+                    )}
                     <div className="h-px bg-border/60 my-1" />
                     <button
                       onClick={() => { logout(); navigate("/login"); }}
