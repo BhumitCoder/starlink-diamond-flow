@@ -34,7 +34,7 @@ export interface Client {
 }
 
 export const TIMELINE_STEPS = [
-  "Order Submitted","Order Approved","CAD Designing","CAD Approved","Wax Model",
+  "Order Submitted","Order Approved","CAD Designing","CAD Approved","Diamond Purchase","Wax Model",
   "Casting","Stone Selection","Diamond Setting","Polishing","Quality Check",
   "Hallmark","Final Approval","Packing","Dispatch","Delivered",
 ] as const;
@@ -178,6 +178,7 @@ export function loadDb(): DB {
     const db = JSON.parse(raw) as DB;
     // backward-compat
     db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], ...o }));
+    db.orders.forEach(insertDiamondPurchaseStep);
     if (!db.tasks) db.tasks = [];
     // backward-compat: fill missing settings fields
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
@@ -198,6 +199,21 @@ export function orderTotal(order: Order): number {
 
 export function balanceDue(order: Order): number {
   return Math.max(0, orderTotal(order) - totalAdvance(order));
+}
+
+/** Backward-compat: insert the "Diamond Purchase" step (added after "CAD Approved")
+ *  into orders created before this step existed, without disturbing their progress. */
+function insertDiamondPurchaseStep(o: Order) {
+  if (o.timeline.some(t => t.step === "Diamond Purchase")) return;
+  const cadIdx = o.timeline.findIndex(t => t.step === "CAD Approved");
+  if (cadIdx === -1) return; // unexpected shape — leave as-is
+  const cadDone = o.timeline[cadIdx].status === "done";
+  o.timeline.splice(cadIdx + 1, 0, {
+    step: "Diamond Purchase",
+    status: cadDone ? "done" : "pending",
+    date: cadDone ? o.timeline[cadIdx].date : undefined,
+    remarks: cadDone ? "Backfilled" : undefined,
+  });
 }
 
 export function saveDb(db: DB) {

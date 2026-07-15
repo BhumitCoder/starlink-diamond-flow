@@ -84,10 +84,12 @@ export function OrderDetailPage() {
       o.timeline[idx] = { ...o.timeline[idx], status: "done", date: new Date().toISOString(), employeeId: user!.id, department: user!.department, remarks: "Completed" };
       if (idx + 1 < o.timeline.length && o.timeline[idx + 1].status === "pending") o.timeline[idx + 1].status = "in_progress";
       const done = o.timeline.filter(t => t.status === "done").length;
+      const finalApprovalIdx = o.timeline.findIndex(x => x.step === "Final Approval");
+      const dispatchIdx      = o.timeline.findIndex(x => x.step === "Dispatch");
       if (done >= 2 && o.status === "Waiting") o.status = "Approved";
-      if (done >= 3 && done < 12) o.status = "In Production";
-      if (done >= 12) o.status = "Ready";
-      if (done >= 14) o.status = "Dispatched";
+      if (done >= 3 && done < finalApprovalIdx + 1) o.status = "In Production";
+      if (done >= finalApprovalIdx + 1) o.status = "Ready";
+      if (done >= dispatchIdx + 1) o.status = "Dispatched";
       if (done === o.timeline.length) o.status = "Delivered";
       const clientUser = d.users.find(u => u.clientId === o.clientId);
       if (clientUser) d.notifications.unshift({ id: "n" + Date.now(), userId: clientUser.id, title: "Timeline updated", body: `${o.orderNumber}: ${o.timeline[idx].step}`, type: "info", read: false, createdAt: new Date().toISOString() });
