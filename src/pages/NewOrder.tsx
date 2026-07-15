@@ -113,6 +113,17 @@ export function NewOrderPage() {
   const set = (key: string, value: unknown) =>
     setF(prev => ({ ...prev, [key]: value }));
 
+  // Karats (14K/18K/22K/24K) only apply to Gold variants — Silver & Platinum don't use karats
+  const metalHasKarats = !["Silver", "Platinum"].includes(f.metal);
+
+  const setMetal = (v: string) => {
+    setF(prev => ({
+      ...prev,
+      metal: v,
+      productKarats: ["Silver", "Platinum"].includes(v) ? "" : prev.productKarats,
+    }));
+  };
+
   const handleOrderValueChange = (raw: string) => {
     setF(prev => ({ ...prev, orderValue: Number(raw) || 0 }));
   };
@@ -141,7 +152,7 @@ export function NewOrderPage() {
     if (!f.designNumber.trim()) { toast.error("Design Number is required."); return; }
     if (!f.productSize.trim())  { toast.error("Product Size is required."); return; }
     if (!f.productColor)        { toast.error("Color of Product is required."); return; }
-    if (!f.productKarats)       { toast.error("Karats of Product is required."); return; }
+    if (metalHasKarats && !f.productKarats) { toast.error("Karats of Product is required."); return; }
     if (!f.rhodium)             { toast.error("Please select a Rhodium option."); return; }
     if (!f.stamping)            { toast.error("Please select a Stamping option."); return; }
 
@@ -299,7 +310,7 @@ export function NewOrderPage() {
             </Field>
 
             <Field label="Metal">
-              <Select value={f.metal} onValueChange={v => set("metal", v)}>
+              <Select value={f.metal} onValueChange={setMetal}>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {["Gold","White Gold","Rose Gold","Platinum","Silver"].map(x =>
@@ -448,15 +459,17 @@ export function NewOrderPage() {
               </Select>
             </Field>
 
-            <Field label="Karats of Product *">
-              <Select value={f.productKarats} onValueChange={v => set("productKarats", v)} required>
-                <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select karats…" /></SelectTrigger>
-                <SelectContent>
-                  {["14K", "18K", "22K", "24K"].map(x =>
-                    <SelectItem key={x} value={x}>{x}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
+            {metalHasKarats && (
+              <Field label="Karats of Product *">
+                <Select value={f.productKarats} onValueChange={v => set("productKarats", v)} required>
+                  <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select karats…" /></SelectTrigger>
+                  <SelectContent>
+                    {["14K", "18K", "22K", "24K"].map(x =>
+                      <SelectItem key={x} value={x}>{x}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
           </div>
 
           {/* Row 4 — Delivery Preference */}
