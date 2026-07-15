@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { loadDb, updateDb, uid, TIMELINE_STEPS, type Order } from "@/lib/db";
@@ -79,9 +79,8 @@ export function NewOrderPage() {
     rhodium: "",
     stamping: "",
 
-    /* order value — editable, pre-seeded from auto-calc */
-    orderValue: Math.round(0.5 * diamondRate),
-    valueManuallySet: false,
+    /* order value — fully manual, admin/employee types the agreed price per order */
+    orderValue: 0,
 
     /* shipping */
     shippingCharge: defaultShipping,
@@ -109,27 +108,16 @@ export function NewOrderPage() {
   const removeImage = (idx: number) =>
     setImages(prev => prev.filter((_, i) => i !== idx));
 
-  /* auto-update order value when diamond weight changes (unless user manually typed it) */
-  useEffect(() => {
-    if (!f.valueManuallySet) {
-      setF(prev => ({
-        ...prev,
-        orderValue: Math.round(Number(prev.diamondWeight) * diamondRate),
-      }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.diamondWeight]);
-
   const set = (key: string, value: unknown) =>
     setF(prev => ({ ...prev, [key]: value }));
 
   const handleOrderValueChange = (raw: string) => {
-    setF(prev => ({ ...prev, orderValue: Number(raw) || 0, valueManuallySet: true }));
+    setF(prev => ({ ...prev, orderValue: Number(raw) || 0 }));
   };
 
-  const resetValueToAuto = () => {
+  const applyEstimate = () => {
     const auto = Math.round(Number(f.diamondWeight) * diamondRate);
-    setF(prev => ({ ...prev, orderValue: auto, valueManuallySet: false }));
+    setF(prev => ({ ...prev, orderValue: auto }));
   };
 
   const submit = (e: React.FormEvent) => {
@@ -566,19 +554,17 @@ export function NewOrderPage() {
             </div>
           </Field>
 
-          {/* Auto-calc hint */}
+          {/* Optional estimate helper — never auto-applied, only on request */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              Auto-estimate based on weights:&nbsp;
+              Weight-based estimate:&nbsp;
               <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
               <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct)</span>
             </span>
-            {f.valueManuallySet && (
-              <button type="button" onClick={resetValueToAuto}
-                className="ml-3 text-primary hover:underline shrink-0 font-medium">
-                Use estimate
-              </button>
-            )}
+            <button type="button" onClick={applyEstimate}
+              className="ml-3 text-primary hover:underline shrink-0 font-medium">
+              Use estimate
+            </button>
           </div>
         </div>
 
