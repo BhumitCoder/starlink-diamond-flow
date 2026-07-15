@@ -14,6 +14,15 @@ import type { Order } from "@/lib/db";
 
 const PAGE_SIZE = 10;
 
+/** Most recent tracking step: whichever step is in progress, else the last completed one, else the first step. */
+function lastTrackingStep(o: Order): string {
+  const inProgress = o.timeline.find(t => t.status === "in_progress");
+  if (inProgress) return inProgress.step;
+  const done = o.timeline.filter(t => t.status === "done");
+  if (done.length) return done[done.length - 1].step;
+  return o.timeline[0]?.step ?? "";
+}
+
 export function OrdersPage() {
   const { user } = useAuth();
   const db = loadDb();
@@ -80,17 +89,24 @@ export function OrdersPage() {
                       <p className="text-xs text-muted-foreground truncate">{o.jewelleryType} · {o.metal} · {o.diamondType} Diamond · {o.quantity} pcs</p>
                       {user!.role !== "client" && <p className="text-xs text-muted-foreground mt-0.5">{client?.companyName}</p>}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={o.status} />
-                      <span className="hidden sm:inline font-semibold text-sm">{fmtMoney(o.amount)}</span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-lg gap-1.5 h-8"
-                        onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
-                      >
-                        <Truck className="h-3.5 w-3.5" /> Track
-                      </Button>
+                    <div className="flex flex-col items-end gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <StatusBadge status={o.status} />
+                        <span className="hidden sm:inline font-semibold text-sm">{fmtMoney(o.amount)}</span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-lg gap-1.5 h-8"
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
+                        >
+                          <Truck className="h-3.5 w-3.5" /> Track
+                        </Button>
+                      </div>
+                      {o.status !== "Delivered" && o.status !== "Rejected" && (
+                        <span className="flex items-center gap-1 text-xs font-medium text-success whitespace-nowrap">
+                          <Truck className="h-3 w-3" /> Last update: {lastTrackingStep(o)}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="mt-3">
