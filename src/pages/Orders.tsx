@@ -5,10 +5,12 @@ import { loadDb, fmtMoney, fmtDate, currentUserOrders } from "@/lib/db";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Package, Plus, Search, Filter } from "lucide-react";
+import { TrackingModal } from "@/components/TrackingModal";
+import { Package, Plus, Search, Filter, Truck } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationBar } from "@/components/PaginationBar";
+import type { Order } from "@/lib/db";
 
 const PAGE_SIZE = 10;
 
@@ -17,6 +19,7 @@ export function OrdersPage() {
   const db = loadDb();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<string>("all");
+  const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
 
   const orders = useMemo(() => {
     let list = currentUserOrders(db, user!);
@@ -80,6 +83,14 @@ export function OrdersPage() {
                     <div className="flex items-center gap-2">
                       <StatusBadge status={o.status} />
                       <span className="hidden sm:inline font-semibold text-sm">{fmtMoney(o.amount)}</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg gap-1.5 h-8"
+                        onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
+                      >
+                        <Truck className="h-3.5 w-3.5" /> Track
+                      </Button>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -107,6 +118,8 @@ export function OrdersPage() {
         onPageChange={setPage}
         label={total > 0 ? `Showing ${start + 1}–${end} of ${total} orders` : undefined}
       />
+
+      <TrackingModal order={trackingOrder} onClose={() => setTrackingOrder(null)} />
     </div>
   );
 }
