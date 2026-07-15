@@ -65,7 +65,6 @@ export function NewOrderPage() {
     diamondType: "Natural",
     quantity: 1,
     diamondWeight: 0.5,
-    metalWeight: 3,
     instructions: "",
     expectedDelivery: "",
     priority: "Normal",
@@ -77,7 +76,7 @@ export function NewOrderPage() {
     productKarats: "",
 
     /* order value — editable, pre-seeded from auto-calc */
-    orderValue: Math.round(0.5 * diamondRate + 3 * metalRate),
+    orderValue: Math.round(0.5 * diamondRate),
     valueManuallySet: false,
 
     /* shipping */
@@ -106,16 +105,16 @@ export function NewOrderPage() {
   const removeImage = (idx: number) =>
     setImages(prev => prev.filter((_, i) => i !== idx));
 
-  /* auto-update order value when weights change (unless user manually typed it) */
+  /* auto-update order value when diamond weight changes (unless user manually typed it) */
   useEffect(() => {
     if (!f.valueManuallySet) {
       setF(prev => ({
         ...prev,
-        orderValue: Math.round(Number(prev.diamondWeight) * diamondRate + Number(prev.metalWeight) * metalRate),
+        orderValue: Math.round(Number(prev.diamondWeight) * diamondRate),
       }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [f.diamondWeight, f.metalWeight]);
+  }, [f.diamondWeight]);
 
   const set = (key: string, value: unknown) =>
     setF(prev => ({ ...prev, [key]: value }));
@@ -125,7 +124,7 @@ export function NewOrderPage() {
   };
 
   const resetValueToAuto = () => {
-    const auto = Math.round(Number(f.diamondWeight) * diamondRate + Number(f.metalWeight) * metalRate);
+    const auto = Math.round(Number(f.diamondWeight) * diamondRate);
     setF(prev => ({ ...prev, orderValue: auto, valueManuallySet: false }));
   };
 
@@ -163,7 +162,7 @@ export function NewOrderPage() {
         diamondType: f.diamondType as Order["diamondType"],
         quantity: Number(f.quantity),
         diamondWeight: Number(f.diamondWeight),
-        metalWeight: Number(f.metalWeight),
+        metalWeight: 0,
         images,
         designNumber: f.designNumber || undefined,
         productSize: f.productSize || undefined,
@@ -222,7 +221,7 @@ export function NewOrderPage() {
   const shipping   = Number(f.shippingCharge) || 0;
   const grandTotal = Number(f.orderValue) + shipping;
   const balanceDue = Math.max(0, grandTotal - Number(f.advanceAmount));
-  const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate + Number(f.metalWeight) * metalRate);
+  const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate);
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
@@ -335,12 +334,6 @@ export function NewOrderPage() {
             <Field label="Diamond Weight (ct)">
               <Input type="number" step="0.01" min={0} value={f.diamondWeight}
                 onChange={e => set("diamondWeight", +e.target.value)}
-                className="rounded-xl h-11" />
-            </Field>
-
-            <Field label="Metal Weight (g)">
-              <Input type="number" step="0.01" min={0} value={f.metalWeight}
-                onChange={e => set("metalWeight", +e.target.value)}
                 className="rounded-xl h-11" />
             </Field>
 
@@ -494,7 +487,7 @@ export function NewOrderPage() {
             <span>
               Auto-estimate based on weights:&nbsp;
               <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
-              <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()} + Metal {f.metalWeight}g × ${metalRate.toLocaleString()})</span>
+              <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct)</span>
             </span>
             {f.valueManuallySet && (
               <button type="button" onClick={resetValueToAuto}
