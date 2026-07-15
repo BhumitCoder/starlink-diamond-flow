@@ -397,7 +397,7 @@ export function ClientHistoryPage() {
         {filtered.length > 0 && (
           <div className="px-5 py-3 bg-secondary/30 border-t border-border/60 flex items-center justify-between text-sm flex-wrap gap-3">
             <span className="text-muted-foreground">{filtered.length} order{filtered.length !== 1 ? "s" : ""}</span>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
               <span className="text-muted-foreground">Total <span className="font-semibold text-foreground">{fmtMoney(filtered.reduce((s, o) => s + o.amount, 0))}</span></span>
               {filtered.some(o => (o.advances||[]).length > 0) && (
                 <>

@@ -5,7 +5,7 @@ export function StatCard({ label, value, icon: Icon, colorClass }: { label: stri
         <Icon className="h-5 w-5" />
       </div>
       <p className="text-xs text-muted-foreground mt-3">{label}</p>
-      <p className="font-display text-2xl md:text-3xl text-brand-dark mt-1 leading-tight">{value}</p>
+      <p className="font-display text-lg md:text-2xl lg:text-3xl text-brand-dark mt-1 leading-tight truncate">{value}</p>
     </div>
   );
 }

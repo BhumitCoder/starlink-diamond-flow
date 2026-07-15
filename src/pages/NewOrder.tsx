@@ -508,13 +508,13 @@ export function NewOrderPage() {
               {["No Rhodium", "Diamond Part White", "Full White", "Other"].map(opt => (
                 <label
                   key={opt}
-                  className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors text-sm
+                  className={`flex items-center gap-2 p-2.5 md:p-3 rounded-xl border cursor-pointer transition-colors text-xs md:text-sm
                     ${f.rhodium === opt
                       ? "border-primary bg-primary/5 text-primary font-medium"
                       : "border-border hover:border-primary/40 hover:bg-secondary/60"}`}
                 >
-                  <RadioGroupItem value={opt} id={`rhodium-${opt}`} />
-                  {opt}
+                  <RadioGroupItem value={opt} id={`rhodium-${opt}`} className="shrink-0" />
+                  <span className="leading-tight">{opt}</span>
                 </label>
               ))}
             </RadioGroup>
@@ -531,13 +531,13 @@ export function NewOrderPage() {
               {["No Stamping", "KT Stamping", "Diamond Weight + KT Stamp", "Other"].map(opt => (
                 <label
                   key={opt}
-                  className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors text-sm
+                  className={`flex items-center gap-2 p-2.5 md:p-3 rounded-xl border cursor-pointer transition-colors text-xs md:text-sm
                     ${f.stamping === opt
                       ? "border-primary bg-primary/5 text-primary font-medium"
                       : "border-border hover:border-primary/40 hover:bg-secondary/60"}`}
                 >
-                  <RadioGroupItem value={opt} id={`stamping-${opt}`} />
-                  {opt}
+                  <RadioGroupItem value={opt} id={`stamping-${opt}`} className="shrink-0" />
+                  <span className="leading-tight">{opt}</span>
                 </label>
               ))}
             </RadioGroup>
@@ -645,27 +645,27 @@ export function NewOrderPage() {
                 </Field>
               </div>
 
-              {/* Balance preview — 4 tiles when shipping > 0, 3 when zero */}
-              <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
+              {/* Balance preview — 2 cols on mobile, 3/4 on desktop */}
+              <div className={`grid gap-3 grid-cols-2 ${shipping > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
                 <div className="p-3 rounded-xl bg-secondary text-center">
                   <p className="text-xs text-muted-foreground mb-1">Order Value</p>
-                  <p className="font-semibold text-brand-dark">${Number(f.orderValue).toLocaleString()}</p>
+                  <p className="font-semibold text-brand-dark text-sm">${Number(f.orderValue).toLocaleString()}</p>
                 </div>
                 {shipping > 0 && (
                   <div className="p-3 rounded-xl bg-secondary text-center">
                     <p className="text-xs text-muted-foreground mb-1">Shipping</p>
-                    <p className="font-semibold text-brand-dark">${shipping.toLocaleString()}</p>
+                    <p className="font-semibold text-brand-dark text-sm">${shipping.toLocaleString()}</p>
                   </div>
                 )}
                 <div className={`p-3 rounded-xl text-center ${f.advanceAmount > 0 ? "bg-success/5 border border-success/20" : "bg-secondary"}`}>
                   <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
-                  <p className={`font-semibold ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
+                  <p className={`font-semibold text-sm ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
                     ${Number(f.advanceAmount || 0).toLocaleString()}
                   </p>
                 </div>
                 <div className={`p-3 rounded-xl text-center ${balanceDue > 0 ? "bg-destructive/5 border border-destructive/20" : "bg-success/5 border border-success/20"}`}>
                   <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
-                  <p className={`font-semibold ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
+                  <p className={`font-semibold text-sm ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
                     {balanceDue > 0 ? `${balanceDue.toLocaleString()}` : "✓ Cleared"}
                   </p>
                 </div>

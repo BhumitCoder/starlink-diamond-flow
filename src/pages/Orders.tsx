@@ -56,13 +56,13 @@ export function OrdersPage() {
         )}
       </div>
 
-      <div className="card-luxe p-4 flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="card-luxe p-4 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders..." className="pl-9 h-11 rounded-xl" />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-48 h-11 rounded-xl"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48 h-11 rounded-xl"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
             {["Waiting","Approved","In Production","Ready","Dispatched","Delivered","Rejected"].map(s =>
@@ -92,7 +92,7 @@ export function OrdersPage() {
                     <div className="flex flex-col items-end gap-1.5">
                       <div className="flex items-center gap-2">
                         <StatusBadge status={o.status} />
-                        <span className="hidden sm:inline font-semibold text-sm">{fmtMoney(o.amount)}</span>
+                        <span className="font-semibold text-sm">{fmtMoney(o.amount)}</span>
                         <Button
                           size="sm"
                           variant="outline"

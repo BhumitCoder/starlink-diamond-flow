@@ -82,7 +82,7 @@ export function Dashboard() {
     <div className="space-y-6 max-w-7xl mx-auto">
       <div>
         <p className="text-sm text-muted-foreground">Good day,</p>
-        <h1 className="font-display text-3xl md:text-4xl text-brand-dark">{client?.companyName || user?.name}</h1>
+        <h1 className="font-display text-2xl md:text-4xl text-brand-dark leading-tight truncate">{client?.companyName || user?.name}</h1>
         <p className="text-sm text-muted-foreground mt-1">Here is what is happening today.</p>
       </div>
 
@@ -151,7 +151,7 @@ export function Dashboard() {
                 <p className="font-medium text-sm truncate">{o.orderNumber} — {o.jewelleryType}</p>
                 <p className="text-xs text-muted-foreground">{db.clients.find(c => c.id === o.clientId)?.companyName} · {fmtDate(o.createdAt)}{o.designNumber ? ` · Design #${o.designNumber}` : ""}</p>
               </div>
-              <div className="hidden sm:block text-sm font-semibold">{fmtMoney(o.amount)}</div>
+              <div className="text-sm font-semibold shrink-0">{fmtMoney(o.amount)}</div>
               <div className="flex flex-col items-end gap-1">
                 <StatusBadge status={o.status} />
                 {o.status !== "Delivered" && o.status !== "Rejected" && (

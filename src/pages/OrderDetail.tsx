@@ -585,7 +585,7 @@ export function OrderDetailPage() {
           const shipping = order.shippingCharge || 0;
           const total = orderTotal(order);
           return (
-            <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
+            <div className={`grid gap-3 grid-cols-2 ${shipping > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
               <div className="p-3 rounded-xl bg-secondary text-center">
                 <p className="text-xs text-muted-foreground mb-1">Order Value</p>
                 <p className="font-semibold text-sm">{fmtMoney(order.amount)}</p>
@@ -607,7 +607,7 @@ export function OrderDetailPage() {
                 </p>
               </div>
               {shipping > 0 && (
-                <div className="col-span-4 px-1 pt-0.5 text-xs text-muted-foreground">
+                <div className="col-span-2 sm:col-span-4 px-1 pt-0.5 text-xs text-muted-foreground">
                   Order Total (value + shipping): <span className="font-semibold text-foreground">{fmtMoney(total)}</span>
                 </div>
               )}
