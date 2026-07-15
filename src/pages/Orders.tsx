@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TrackingModal } from "@/components/TrackingModal";
-import { Package, Plus, Search, Filter, Truck } from "lucide-react";
+import { Package, Plus, Search, Filter, Truck, ExternalLink } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationBar } from "@/components/PaginationBar";
@@ -105,6 +105,23 @@ export function OrdersPage() {
                       {o.status !== "Delivered" && o.status !== "Rejected" && (
                         <span className="flex items-center gap-1 text-xs font-medium text-success whitespace-nowrap">
                           <Truck className="h-3 w-3" /> Last update: {lastTrackingStep(o)}
+                        </span>
+                      )}
+                      {(o.status === "Dispatched" || o.status === "Delivered") && o.courierName && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Truck className="h-3 w-3 shrink-0" />
+                          {o.courierName} · <span className="font-mono">{o.trackingNumber}</span>
+                          {o.trackingLink && (
+                            <a
+                              href={o.trackingLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              className="inline-flex items-center gap-0.5 text-primary hover:underline ml-1"
+                            >
+                              <ExternalLink className="h-3 w-3" /> Track
+                            </a>
+                          )}
                         </span>
                       )}
                     </div>

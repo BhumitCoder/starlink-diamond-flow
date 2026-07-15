@@ -96,6 +96,7 @@ export interface Order {
   // Dispatch info
   courierName?: string;
   trackingNumber?: string;
+  trackingLink?: string;
 }
 
 export interface Task {

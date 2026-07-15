@@ -60,6 +60,7 @@ export function OrderDetailPage() {
   const [showDispatch, setShowDispatch] = useState(false);
   const [courierName, setCourierName] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
+  const [trackingLink, setTrackingLink] = useState("");
 
   // Pricing form (admin/employee set the order value — client never sets this)
   const [showPricing, setShowPricing] = useState(false);
@@ -148,6 +149,7 @@ export function OrderDetailPage() {
       const o = d.orders.find(x => x.id === order.id)!;
       o.courierName = courierName.trim();
       o.trackingNumber = trackingNumber.trim();
+      o.trackingLink = trackingLink.trim() || undefined;
       const clientUser = d.users.find(u => u.clientId === o.clientId);
       if (clientUser) d.notifications.unshift({ id: uid("n_"), userId: clientUser.id, title: "Order Dispatched", body: `${o.orderNumber} dispatched via ${courierName.trim()} · Tracking: ${trackingNumber.trim()}`, type: "info", read: false, createdAt: new Date().toISOString() });
     });
@@ -470,6 +472,7 @@ export function OrderDetailPage() {
               <Button size="sm" variant="outline" onClick={() => {
                 setCourierName(order.courierName ?? "");
                 setTrackingNumber(order.trackingNumber ?? "");
+                setTrackingLink(order.trackingLink ?? "");
                 setShowDispatch(v => !v);
               }} className="rounded-xl gap-2">
                 <Truck className="h-4 w-4" />
@@ -489,6 +492,20 @@ export function OrderDetailPage() {
                 <p className="text-xs text-muted-foreground mb-1">Tracking Number</p>
                 <p className="font-semibold font-mono">{order.trackingNumber}</p>
               </div>
+              {order.trackingLink && (
+                <div className="sm:col-span-2 p-4 rounded-xl bg-secondary">
+                  <p className="text-xs text-muted-foreground mb-1">Tracking Link</p>
+                  <a
+                    href={order.trackingLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-primary font-semibold text-sm hover:underline break-all"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                    {order.trackingLink}
+                  </a>
+                </div>
+              )}
             </div>
           )}
 
@@ -520,6 +537,16 @@ export function OrderDetailPage() {
                         onChange={e => setTrackingNumber(e.target.value)}
                         className="rounded-xl h-10 font-mono"
                         placeholder="e.g. 1Z999AA10123456784"
+                      />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Tracking Link (optional)</Label>
+                      <Input
+                        value={trackingLink}
+                        onChange={e => setTrackingLink(e.target.value)}
+                        className="rounded-xl h-10"
+                        placeholder="e.g. https://fedex.com/track?id=..."
+                        type="url"
                       />
                     </div>
                   </div>

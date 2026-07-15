@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { fmtDate, type Order } from "@/lib/db";
-import { CheckCircle2, Circle, Loader2, Truck } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink, Loader2, Truck } from "lucide-react";
 
 interface Props {
   order: Order | null;
@@ -36,9 +36,19 @@ export function TrackingModal({ order, onClose }: Props) {
             <div className="h-9 w-9 rounded-xl bg-primary/10 grid place-items-center shrink-0">
               <Truck className="h-4.5 w-4.5 text-primary" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs text-muted-foreground">Shipped via {order.courierName}</p>
               <p className="font-mono text-sm font-semibold truncate">{order.trackingNumber}</p>
+              {order.trackingLink && (
+                <a
+                  href={order.trackingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5"
+                >
+                  <ExternalLink className="h-3 w-3" /> Track Shipment
+                </a>
+              )}
             </div>
           </div>
         )}
