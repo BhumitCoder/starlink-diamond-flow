@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { loadDb, updateDb, uid, type User } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
 import { TasksPanel } from "@/components/TasksPanel";
-import { Plus, Trash2, Search, ListTodo } from "lucide-react";
+import { Plus, Trash2, Search, ListTodo, Eye, Users } from "lucide-react";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationBar } from "@/components/PaginationBar";
@@ -55,6 +56,10 @@ export function EmployeesPage() {
   /** Count pending tasks for an employee */
   const pendingCount = (userId: string) =>
     (db.tasks ?? []).filter(t => t.assignedTo === userId && !t.completed).length;
+
+  /** Count clients assigned to an employee */
+  const clientCount = (userId: string) =>
+    db.clients.filter(c => c.accountManagerId === userId).length;
 
   return (
     <div className="max-w-7xl mx-auto space-y-5">
@@ -115,9 +120,20 @@ export function EmployeesPage() {
                   </div>
                   <StatusBadge status={u.status} />
                 </div>
-                <p className="text-xs mt-2 inline-block px-2 py-0.5 rounded-full bg-secondary">{u.department}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <p className="text-xs inline-block px-2 py-0.5 rounded-full bg-secondary">{u.department}</p>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3 w-3" /> {clientCount(u.id)} client{clientCount(u.id) !== 1 ? "s" : ""}
+                  </span>
+                </div>
 
                 <div className="flex gap-2 mt-3">
+                  <Button asChild size="sm" className="btn-hero rounded-lg flex-1 gap-1.5">
+                    <Link to={`/employees/${u.id}`}>
+                      <Eye className="h-3.5 w-3.5" /> View
+                    </Link>
+                  </Button>
+
                   {/* Tasks button */}
                   <Button
                     size="sm"
@@ -133,7 +149,9 @@ export function EmployeesPage() {
                       </span>
                     )}
                   </Button>
+                </div>
 
+                <div className="flex gap-2 mt-2">
                   <Button size="sm" variant="outline" onClick={() => toggle(u)} className="rounded-lg flex-1">
                     {u.status === "active" ? "Deactivate" : "Activate"}
                   </Button>

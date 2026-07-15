@@ -9,6 +9,7 @@ import { NewOrderPage } from "./pages/NewOrder";
 import { ClientsPage } from "./pages/Clients";
 import { ClientHistoryPage } from "./pages/ClientHistory";
 import { EmployeesPage } from "./pages/Employees";
+import { EmployeeDetailPage } from "./pages/EmployeeDetail";
 import { MessagesPage } from "./pages/Messages";
 import { NotificationsPage } from "./pages/Notifications";
 import { ReportsPage } from "./pages/Reports";
@@ -40,6 +41,7 @@ export function App() {
           <Route path="clients" element={<Protected roles={["admin","employee"]}><ClientsPage /></Protected>} />
           <Route path="clients/:id" element={<Protected roles={["admin","employee"]}><ClientHistoryPage /></Protected>} />
           <Route path="employees" element={<Protected roles={["admin"]}><EmployeesPage /></Protected>} />
+          <Route path="employees/:id" element={<Protected roles={["admin"]}><EmployeeDetailPage /></Protected>} />
           <Route path="invoices" element={<InvoicesPage />} />
           <Route path="messages" element={<MessagesPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
