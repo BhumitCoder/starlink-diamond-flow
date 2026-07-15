@@ -61,6 +61,11 @@ export function OrderDetailPage() {
   const [courierName, setCourierName] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
 
+  // Pricing form (admin/employee set the order value — client never sets this)
+  const [showPricing, setShowPricing] = useState(false);
+  const [priceValue, setPriceValue] = useState("");
+  const [priceShipping, setPriceShipping] = useState("");
+
   const db = loadDb();
   const order = db.orders.find(o => o.id === id);
   if (!order) return <div className="text-center py-20">Order not found. <Link to="/orders" className="text-primary underline">Back</Link></div>;
@@ -146,6 +151,21 @@ export function OrderDetailPage() {
     });
     toast.success("Dispatch info saved — client notified");
     setShowDispatch(false);
+  };
+
+  const savePricing = () => {
+    const val = parseFloat(priceValue);
+    const ship = parseFloat(priceShipping) || 0;
+    if (!val || val <= 0) { toast.error("Enter a valid order value"); return; }
+    updateDb(d => {
+      const o = d.orders.find(x => x.id === order.id)!;
+      o.amount = val;
+      o.shippingCharge = ship;
+      const clientUser = d.users.find(u => u.clientId === o.clientId);
+      if (clientUser) d.notifications.unshift({ id: uid("n_"), userId: clientUser.id, title: "Order Priced", body: `${o.orderNumber} order value set to ${fmtMoney(val)}${ship > 0 ? ` + ${fmtMoney(ship)} shipping` : ""}`, type: "info", read: false, createdAt: new Date().toISOString() });
+    });
+    toast.success("Pricing saved — client notified");
+    setShowPricing(false);
   };
 
   // Conditions for CAD and Dispatch sections
@@ -250,8 +270,6 @@ export function OrderDetailPage() {
             ["Quantity", `${order.quantity} pcs`],
             ["Diamond", `${order.diamondWeight} ct (${order.diamondType})`],
             ["Priority", order.priority],
-            ["Order Value", fmtMoney(order.amount)],
-            ["Shipping", (order.shippingCharge || 0) > 0 ? fmtMoney(order.shippingCharge) : "—"],
             ["Delivery Date", fmtDate(order.expectedDelivery)],
             ["Assigned to", employee?.name || "—"],
             ["Created", fmtDate(order.createdAt)],
@@ -266,6 +284,77 @@ export function OrderDetailPage() {
             <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="font-medium mt-0.5">{v}</p></div>
           ))}
         </div>
+
+        {/* ── Pricing — set/edited by admin & employee only, never by the client ── */}
+        {user!.role !== "client" && (
+          <div className="mt-4 pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-xs text-muted-foreground">Order Value</p>
+                  <p className={`font-medium mt-0.5 ${order.amount ? "" : "text-muted-foreground italic"}`}>
+                    {order.amount ? fmtMoney(order.amount) : "Pricing pending"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Shipping</p>
+                  <p className="font-medium mt-0.5">{(order.shippingCharge || 0) > 0 ? fmtMoney(order.shippingCharge) : "—"}</p>
+                </div>
+              </div>
+              {canEditStage() && (
+                <Button
+                  size="sm" variant="outline" className="rounded-xl gap-2"
+                  onClick={() => {
+                    setPriceValue(order.amount ? String(order.amount) : "");
+                    setPriceShipping(order.shippingCharge ? String(order.shippingCharge) : "");
+                    setShowPricing(v => !v);
+                  }}
+                >
+                  <DollarSign className="h-3.5 w-3.5" />
+                  {order.amount ? "Edit Pricing" : "Set Pricing"}
+                </Button>
+              )}
+            </div>
+
+            <AnimatePresence>
+              {showPricing && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="pt-4 mt-1 grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Order Value ($) *</Label>
+                      <Input
+                        type="number" min={0} step="0.01" autoFocus
+                        value={priceValue}
+                        onChange={e => setPriceValue(e.target.value)}
+                        className="rounded-xl h-10"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Shipping Charge ($)</Label>
+                      <Input
+                        type="number" min={0} step="0.01"
+                        value={priceShipping}
+                        onChange={e => setPriceShipping(e.target.value)}
+                        className="rounded-xl h-10"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" onClick={savePricing} className="btn-hero rounded-xl">Save & Notify Client</Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowPricing(false)} className="rounded-xl">Cancel</Button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
 
         {/* Reference images */}
         {order.images && order.images.length > 0 && (

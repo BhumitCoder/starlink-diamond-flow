@@ -132,7 +132,7 @@ export function NewOrderPage() {
       toast.error("Please select a client for this order.");
       return;
     }
-    if (f.orderValue <= 0) {
+    if (!isClient && f.orderValue <= 0) {
       toast.error("Please enter a valid order value.");
       return;
     }
@@ -529,131 +529,144 @@ export function NewOrderPage() {
           </div>
         </div>
 
-        {/* ── Order Value ── */}
-        <div className="card-luxe p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
-              <DollarSign className="h-4 w-4 text-brand-dark" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-brand-dark">Order Value</h2>
-              <p className="text-xs text-muted-foreground">Set the agreed order amount</p>
-            </div>
-          </div>
-
-          <Field label="Order Value ($) *">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
-              <Input
-                type="number" min={0} step="0.01" required
-                value={f.orderValue || ""}
-                onChange={e => handleOrderValueChange(e.target.value)}
-                className="rounded-xl h-11 pl-7 text-base font-semibold"
-                placeholder="0"
-              />
-            </div>
-          </Field>
-
-          {/* Optional estimate helper — never auto-applied, only on request */}
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              Weight-based estimate:&nbsp;
-              <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
-              <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct)</span>
-            </span>
-            <button type="button" onClick={applyEstimate}
-              className="ml-3 text-primary hover:underline shrink-0 font-medium">
-              Use estimate
-            </button>
-          </div>
-        </div>
-
-        {/* ── Shipping Charge ── */}
-        <div className="card-luxe p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
-              <DollarSign className="h-4 w-4 text-brand-dark" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-brand-dark">Shipping Charge</h2>
-              <p className="text-xs text-muted-foreground">Freight / courier cost added to this order</p>
-            </div>
-          </div>
-          <Field label="Shipping Charge ($)">
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
-              <Input
-                type="number" min={0} step="0.01"
-                value={f.shippingCharge || ""}
-                onChange={e => set("shippingCharge", +e.target.value)}
-                className="rounded-xl h-11 pl-7"
-                placeholder="0"
-              />
-            </div>
-          </Field>
-        </div>
-
-        {/* ── Advance Payment ── */}
-        <div className="card-luxe p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-success/10 grid place-items-center shrink-0">
-              <DollarSign className="h-4 w-4 text-success" />
-            </div>
-            <div>
-              <h2 className="font-semibold text-brand-dark">Advance Payment</h2>
-              <p className="text-xs text-muted-foreground">Optional — enter any amount paid upfront</p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Advance Amount ($)">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
-                <Input
-                  type="number" min={0} max={grandTotal} step="0.01"
-                  value={f.advanceAmount || ""}
-                  onChange={e => set("advanceAmount", +e.target.value)}
-                  className="rounded-xl h-11 pl-7"
-                  placeholder="0"
-                />
+        {/* ── Order Value / Shipping / Advance — staff only, client never sets price ── */}
+        {!isClient && (
+          <>
+            <div className="card-luxe p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
+                  <DollarSign className="h-4 w-4 text-brand-dark" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-brand-dark">Order Value</h2>
+                  <p className="text-xs text-muted-foreground">Set the agreed order amount</p>
+                </div>
               </div>
-            </Field>
-            <Field label="Payment Note">
-              <Input
-                value={f.advanceNote}
-                onChange={e => set("advanceNote", e.target.value)}
-                className="rounded-xl h-11"
-                placeholder="e.g. Cash, Bank transfer, Cheque"
-              />
-            </Field>
-          </div>
 
-          {/* Balance preview — 4 tiles when shipping > 0, 3 when zero */}
-          <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
-            <div className="p-3 rounded-xl bg-secondary text-center">
-              <p className="text-xs text-muted-foreground mb-1">Order Value</p>
-              <p className="font-semibold text-brand-dark">${Number(f.orderValue).toLocaleString()}</p>
-            </div>
-            {shipping > 0 && (
-              <div className="p-3 rounded-xl bg-secondary text-center">
-                <p className="text-xs text-muted-foreground mb-1">Shipping</p>
-                <p className="font-semibold text-brand-dark">${shipping.toLocaleString()}</p>
+              <Field label="Order Value ($) *">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
+                  <Input
+                    type="number" min={0} step="0.01" required
+                    value={f.orderValue || ""}
+                    onChange={e => handleOrderValueChange(e.target.value)}
+                    className="rounded-xl h-11 pl-7 text-base font-semibold"
+                    placeholder="0"
+                  />
+                </div>
+              </Field>
+
+              {/* Optional estimate helper — never auto-applied, only on request */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>
+                  Weight-based estimate:&nbsp;
+                  <span className="font-medium text-foreground">${autoValue.toLocaleString()}</span>
+                  <span className="ml-1">(Diamond {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct)</span>
+                </span>
+                <button type="button" onClick={applyEstimate}
+                  className="ml-3 text-primary hover:underline shrink-0 font-medium">
+                  Use estimate
+                </button>
               </div>
-            )}
-            <div className={`p-3 rounded-xl text-center ${f.advanceAmount > 0 ? "bg-success/5 border border-success/20" : "bg-secondary"}`}>
-              <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
-              <p className={`font-semibold ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
-                ${Number(f.advanceAmount || 0).toLocaleString()}
-              </p>
             </div>
-            <div className={`p-3 rounded-xl text-center ${balanceDue > 0 ? "bg-destructive/5 border border-destructive/20" : "bg-success/5 border border-success/20"}`}>
-              <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
-              <p className={`font-semibold ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
-                {balanceDue > 0 ? `${balanceDue.toLocaleString()}` : "✓ Cleared"}
-              </p>
+
+            {/* ── Shipping Charge ── */}
+            <div className="card-luxe p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-brand-light/15 grid place-items-center shrink-0">
+                  <DollarSign className="h-4 w-4 text-brand-dark" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-brand-dark">Shipping Charge</h2>
+                  <p className="text-xs text-muted-foreground">Freight / courier cost added to this order</p>
+                </div>
+              </div>
+              <Field label="Shipping Charge ($)">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
+                  <Input
+                    type="number" min={0} step="0.01"
+                    value={f.shippingCharge || ""}
+                    onChange={e => set("shippingCharge", +e.target.value)}
+                    className="rounded-xl h-11 pl-7"
+                    placeholder="0"
+                  />
+                </div>
+              </Field>
             </div>
+
+            {/* ── Advance Payment ── */}
+            <div className="card-luxe p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-lg bg-success/10 grid place-items-center shrink-0">
+                  <DollarSign className="h-4 w-4 text-success" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-brand-dark">Advance Payment</h2>
+                  <p className="text-xs text-muted-foreground">Optional — enter any amount paid upfront</p>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Advance Amount ($)">
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm">$</span>
+                    <Input
+                      type="number" min={0} max={grandTotal} step="0.01"
+                      value={f.advanceAmount || ""}
+                      onChange={e => set("advanceAmount", +e.target.value)}
+                      className="rounded-xl h-11 pl-7"
+                      placeholder="0"
+                    />
+                  </div>
+                </Field>
+                <Field label="Payment Note">
+                  <Input
+                    value={f.advanceNote}
+                    onChange={e => set("advanceNote", e.target.value)}
+                    className="rounded-xl h-11"
+                    placeholder="e.g. Cash, Bank transfer, Cheque"
+                  />
+                </Field>
+              </div>
+
+              {/* Balance preview — 4 tiles when shipping > 0, 3 when zero */}
+              <div className={`grid gap-3 ${shipping > 0 ? "grid-cols-4" : "grid-cols-3"}`}>
+                <div className="p-3 rounded-xl bg-secondary text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Order Value</p>
+                  <p className="font-semibold text-brand-dark">${Number(f.orderValue).toLocaleString()}</p>
+                </div>
+                {shipping > 0 && (
+                  <div className="p-3 rounded-xl bg-secondary text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Shipping</p>
+                    <p className="font-semibold text-brand-dark">${shipping.toLocaleString()}</p>
+                  </div>
+                )}
+                <div className={`p-3 rounded-xl text-center ${f.advanceAmount > 0 ? "bg-success/5 border border-success/20" : "bg-secondary"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Advance Paid</p>
+                  <p className={`font-semibold ${f.advanceAmount > 0 ? "text-success" : "text-muted-foreground"}`}>
+                    ${Number(f.advanceAmount || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-xl text-center ${balanceDue > 0 ? "bg-destructive/5 border border-destructive/20" : "bg-success/5 border border-success/20"}`}>
+                  <p className="text-xs text-muted-foreground mb-1">Balance Due</p>
+                  <p className={`font-semibold ${balanceDue > 0 ? "text-destructive" : "text-success"}`}>
+                    {balanceDue > 0 ? `${balanceDue.toLocaleString()}` : "✓ Cleared"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {isClient && (
+          <div className="card-luxe p-5 flex items-start gap-3 bg-secondary/40">
+            <DollarSign className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              Pricing will be set by our team after reviewing your request — no payment details are needed from you right now.
+            </p>
           </div>
-        </div>
+        )}
 
         <div className="flex justify-end gap-2 pb-4">
           <Button type="button" variant="outline" onClick={() => nav(-1)} className="rounded-xl">
