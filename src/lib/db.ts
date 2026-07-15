@@ -23,6 +23,7 @@ export interface Client {
   email: string;
   phone: string;
   country: string;
+  zip?: string;
   gstVat: string;
   address: string;
   username: string;
