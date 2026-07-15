@@ -39,18 +39,6 @@ function printLabel(c: Client) {
       display: flex; flex-direction: column;
       overflow: hidden;
     }
-    /* ── FROM header ── */
-    .header {
-      background: #1a1a2e;
-      color: #fff;
-      padding: 6mm 8mm 5mm;
-    }
-    .header-title {
-      font-size: 15pt; font-weight: 800; letter-spacing: 1px;
-    }
-    .header-sub {
-      font-size: 8pt; opacity: .75; margin-top: 1.5mm; letter-spacing: .5px;
-    }
     /* ── SHIP TO ── */
     .ship-to-banner {
       background: #f0f0f0;
@@ -88,10 +76,6 @@ function printLabel(c: Client) {
 </head>
 <body>
   <div class="label">
-    <div class="header">
-      <div class="header-title">STARLINK JEWELS</div>
-      <div class="header-sub">Fine Diamond Jewelry · India → USA</div>
-    </div>
     <div class="ship-to-banner">Ship To</div>
     <div class="body">
       <div class="field">
@@ -110,10 +94,6 @@ function printLabel(c: Client) {
         <div class="field-label">Contact Number :</div>
         <div class="field-value">${c.phone || "—"}</div>
       </div>
-    </div>
-    <div class="footer">
-      <span>Starlink Jewels · starlinkjewels.com</span>
-      <span>${new Date().toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })}</span>
     </div>
   </div>
 </body>
