@@ -155,7 +155,7 @@ export function Dashboard() {
               <div className="flex flex-col items-end gap-1">
                 <StatusBadge status={o.status} />
                 {o.status !== "Delivered" && o.status !== "Rejected" && (
-                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap">
+                  <span className="flex items-center gap-1 text-[11px] font-medium text-primary whitespace-nowrap">
                     <Truck className="h-3 w-3" /> {lastTrackingStep(o)}
                   </span>
                 )}
