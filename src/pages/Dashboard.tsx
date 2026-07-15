@@ -2,11 +2,21 @@ import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { loadDb, fmtMoney, fmtDate, currentUserOrders } from "@/lib/db";
 import { motion } from "framer-motion";
-import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight } from "lucide-react";
+import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import type { Order } from "@/lib/db";
+
+/** Most recent tracking step: whichever step is in progress, else the last completed one, else the first step. */
+function lastTrackingStep(o: Order): string {
+  const inProgress = o.timeline.find(t => t.status === "in_progress");
+  if (inProgress) return inProgress.step;
+  const done = o.timeline.filter(t => t.status === "done");
+  if (done.length) return done[done.length - 1].step;
+  return o.timeline[0]?.step ?? "";
+}
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -142,7 +152,14 @@ export function Dashboard() {
                 <p className="text-xs text-muted-foreground">{db.clients.find(c => c.id === o.clientId)?.companyName} · {fmtDate(o.createdAt)}</p>
               </div>
               <div className="hidden sm:block text-sm font-semibold">{fmtMoney(o.amount)}</div>
-              <StatusBadge status={o.status} />
+              <div className="flex flex-col items-end gap-1">
+                <StatusBadge status={o.status} />
+                {o.status !== "Delivered" && o.status !== "Rejected" && (
+                  <span className="flex items-center gap-1 text-[11px] text-muted-foreground whitespace-nowrap">
+                    <Truck className="h-3 w-3" /> {lastTrackingStep(o)}
+                  </span>
+                )}
+              </div>
             </Link>
           ))}
         </div>
