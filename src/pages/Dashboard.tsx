@@ -149,7 +149,7 @@ export function Dashboard() {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{o.orderNumber} — {o.jewelleryType}</p>
-                <p className="text-xs text-muted-foreground">{db.clients.find(c => c.id === o.clientId)?.companyName} · {fmtDate(o.createdAt)}</p>
+                <p className="text-xs text-muted-foreground">{db.clients.find(c => c.id === o.clientId)?.companyName} · {fmtDate(o.createdAt)}{o.designNumber ? ` · Design #${o.designNumber}` : ""}</p>
               </div>
               <div className="hidden sm:block text-sm font-semibold">{fmtMoney(o.amount)}</div>
               <div className="flex flex-col items-end gap-1">

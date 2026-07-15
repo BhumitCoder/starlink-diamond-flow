@@ -86,7 +86,7 @@ export function OrdersPage() {
                   <div className="flex items-start justify-between gap-3 flex-wrap">
                     <div className="min-w-0">
                       <p className="font-semibold truncate">{o.orderNumber}</p>
-                      <p className="text-xs text-muted-foreground truncate">{o.jewelleryType} · {o.metal} · {o.diamondType} Diamond · {o.quantity} pcs</p>
+                      <p className="text-xs text-muted-foreground truncate">{o.jewelleryType} · {o.metal} · {o.diamondType} Diamond · {o.quantity} pcs{o.designNumber ? ` · Design #${o.designNumber}` : ""}</p>
                       {user!.role !== "client" && <p className="text-xs text-muted-foreground mt-0.5">{client?.companyName}</p>}
                     </div>
                     <div className="flex flex-col items-end gap-1.5">

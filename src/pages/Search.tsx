@@ -10,7 +10,11 @@ export function SearchPage() {
   const [q, setQ] = useState("");
   const db = loadDb();
   const ql = q.toLowerCase();
-  const orders = q ? db.orders.filter(o => o.orderNumber.toLowerCase().includes(ql) || o.jewelleryType.toLowerCase().includes(ql)).slice(0, 8) : [];
+  const orders = q ? db.orders.filter(o =>
+    o.orderNumber.toLowerCase().includes(ql) ||
+    o.jewelleryType.toLowerCase().includes(ql) ||
+    (o.designNumber || "").toLowerCase().includes(ql)
+  ).slice(0, 8) : [];
   // Employees only search their own assigned clients; clients don't search the client list at all.
   const scopedClients = user!.role === "employee"
     ? db.clients.filter(c => c.accountManagerId === user!.id)
@@ -26,7 +30,7 @@ export function SearchPage() {
       <h1 className="font-display text-3xl text-brand-dark">Search</h1>
       <Input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, clients, employees, invoices..." className="rounded-xl h-12" />
       {q && <div className="space-y-4">
-        <Section title="Orders" icon={Package} items={orders.map(o => ({ id: o.id, to: `/orders/${o.id}`, title: o.orderNumber, sub: `${o.jewelleryType} - ${o.status}` }))} />
+        <Section title="Orders" icon={Package} items={orders.map(o => ({ id: o.id, to: `/orders/${o.id}`, title: o.orderNumber, sub: `${o.jewelleryType} - ${o.status}${o.designNumber ? ` · Design #${o.designNumber}` : ""}` }))} />
         <Section title="Clients" icon={Users} items={clients.map(c => ({ id: c.id, to: `/clients`, title: c.companyName, sub: c.ownerName }))} />
         <Section title="Employees" icon={Briefcase} items={employees.map(u => ({ id: u.id, to: `/employees`, title: u.name, sub: u.department || "" }))} />
         <Section title="Invoices" icon={FileText} items={invoices.map(i => ({ id: i.id, to: `/invoices`, title: i.number, sub: `$${i.amount}` }))} />
