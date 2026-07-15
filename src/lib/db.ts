@@ -98,6 +98,16 @@ export interface Order {
   trackingNumber?: string;
 }
 
+export interface Task {
+  id: string;
+  title: string;
+  assignedTo: string;   // userId (employee)
+  assignedBy: string;   // userId (admin)
+  completed: boolean;
+  completedAt?: string;
+  createdAt: string;
+}
+
 export interface Message {
   id: string;
   orderId?: string;
@@ -142,6 +152,7 @@ export interface DB {
   users: User[];
   clients: Client[];
   orders: Order[];
+  tasks: Task[];
   messages: Message[];
   notifications: Notification[];
   invoices: Invoice[];
@@ -152,7 +163,7 @@ export interface DB {
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -165,8 +176,9 @@ export function loadDb(): DB {
   }
   try {
     const db = JSON.parse(raw) as DB;
-    // backward-compat: fill missing fields on orders
+    // backward-compat
     db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], ...o }));
+    if (!db.tasks) db.tasks = [];
     // backward-compat: fill missing settings fields
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
     if (db.settings.metalRate == null) db.settings.metalRate = 65;

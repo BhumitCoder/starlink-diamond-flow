@@ -1,9 +1,10 @@
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle } from "lucide-react";
+import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle, ListTodo } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadDb } from "@/lib/db";
 import { useEffect, useRef, useState } from "react";
+import { TasksPanel } from "@/components/TasksPanel";
 
 interface NavItem { to: string; label: string; icon: any; roles?: string[]; }
 const NAV: NavItem[] = [
@@ -54,10 +55,16 @@ export function AppLayout() {
   const loc = useLocation();
   const [unread, setUnread] = useState(0);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState(0);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const calc = () => { const db = loadDb(); setUnread(db.notifications.filter(n => n.userId === user?.id && !n.read).length); };
+    const calc = () => {
+      const db = loadDb();
+      setUnread(db.notifications.filter(n => n.userId === user?.id && !n.read).length);
+      setPendingTasks((db.tasks ?? []).filter(t => t.assignedTo === user?.id && !t.completed).length);
+    };
     calc();
     window.addEventListener("starlink-db-updated", calc);
     return () => window.removeEventListener("starlink-db-updated", calc);
@@ -264,7 +271,33 @@ export function AppLayout() {
             <Plus className="h-6 w-6" />
           </button>
         )}
+
+        {/* ── My Tasks floating button (employee + admin) ── */}
+        {(user?.role === "employee" || user?.role === "admin") && (
+          <button
+            onClick={() => setTasksOpen(v => !v)}
+            className="fixed right-5 z-40 flex items-center gap-2 px-4 h-11 rounded-full bg-white border border-border shadow-lg hover:shadow-xl hover:border-primary/40 transition-all text-sm font-medium text-foreground"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 1.25rem)" }}
+          >
+            <ListTodo className="h-4 w-4 text-primary shrink-0" />
+            <span className="hidden sm:inline">My Tasks</span>
+            {pendingTasks > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">
+                {pendingTasks > 99 ? "99+" : pendingTasks}
+              </span>
+            )}
+          </button>
+        )}
       </div>
+
+      {/* ── Tasks Panel (my own tasks) ── */}
+      {user && (user.role === "employee" || user.role === "admin") && (
+        <TasksPanel
+          userId={user.id}
+          open={tasksOpen}
+          onClose={() => setTasksOpen(false)}
+        />
+      )}
     </div>
   );
 }

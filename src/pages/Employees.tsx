@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/StatusBadge";
-import { Plus, Trash2, Search } from "lucide-react";
+import { TasksPanel } from "@/components/TasksPanel";
+import { Plus, Trash2, Search, ListTodo } from "lucide-react";
 import { toast } from "sonner";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationBar } from "@/components/PaginationBar";
@@ -19,6 +20,9 @@ export function EmployeesPage() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ name: "", username: "", password: "", email: "", phone: "", department: "Sales" });
+
+  // Tasks panel state
+  const [tasksPanelUser, setTasksPanelUser] = useState<string | null>(null);
 
   const emps = db.users
     .filter(u => u.role === "employee")
@@ -48,6 +52,10 @@ export function EmployeesPage() {
     toast.success("Deleted");
   };
 
+  /** Count pending tasks for an employee */
+  const pendingCount = (userId: string) =>
+    (db.tasks ?? []).filter(t => t.assignedTo === userId && !t.completed).length;
+
   return (
     <div className="max-w-7xl mx-auto space-y-5">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -67,7 +75,7 @@ export function EmployeesPage() {
                   <Label className="text-xs capitalize">{k}</Label>
                   <Input
                     type={k === "password" ? "password" : "text"}
-                    value={(f as any)[k]}
+                    value={(f as Record<string,string>)[k]}
                     onChange={e => setF({ ...f, [k]: e.target.value })}
                     className="rounded-xl mt-1"
                   />
@@ -92,31 +100,51 @@ export function EmployeesPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {paged.map(u => (
-          <div key={u.id} className="card-luxe p-5 flex items-start gap-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white font-semibold grid place-items-center shrink-0 text-lg">
-              {u.name.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-semibold truncate">{u.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+        {paged.map(u => {
+          const pending = pendingCount(u.id);
+          return (
+            <div key={u.id} className="card-luxe p-5 flex items-start gap-3">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white font-semibold grid place-items-center shrink-0 text-lg">
+                {u.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold truncate">{u.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                  <StatusBadge status={u.status} />
                 </div>
-                <StatusBadge status={u.status} />
-              </div>
-              <p className="text-xs mt-2 inline-block px-2 py-0.5 rounded-full bg-secondary">{u.department}</p>
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="outline" onClick={() => toggle(u)} className="rounded-lg flex-1">
-                  {u.status === "active" ? "Deactivate" : "Activate"}
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => del(u.id)} className="rounded-lg text-destructive">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <p className="text-xs mt-2 inline-block px-2 py-0.5 rounded-full bg-secondary">{u.department}</p>
+
+                <div className="flex gap-2 mt-3">
+                  {/* Tasks button */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTasksPanelUser(u.id)}
+                    className="rounded-lg flex-1 gap-1.5 relative"
+                  >
+                    <ListTodo className="h-3.5 w-3.5 text-primary" />
+                    Tasks
+                    {pending > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center h-4.5 h-[18px] min-w-[18px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold leading-none">
+                        {pending}
+                      </span>
+                    )}
+                  </Button>
+
+                  <Button size="sm" variant="outline" onClick={() => toggle(u)} className="rounded-lg flex-1">
+                    {u.status === "active" ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => del(u.id)} className="rounded-lg text-destructive">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {total === 0 && (
           <div className="col-span-full card-luxe p-12 text-center text-muted-foreground">No employees found.</div>
         )}
@@ -127,6 +155,14 @@ export function EmployeesPage() {
         totalPages={totalPages}
         onPageChange={setPage}
         label={total > 0 ? `Showing ${start + 1}–${end} of ${total} employees` : undefined}
+      />
+
+      {/* Tasks panel (admin assigning tasks to an employee) */}
+      <TasksPanel
+        userId={tasksPanelUser ?? ""}
+        open={!!tasksPanelUser}
+        onClose={() => setTasksPanelUser(null)}
+        asAdmin
       />
     </div>
   );
