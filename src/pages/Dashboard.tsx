@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
-import { loadDb, fmtMoney, fmtDate, currentUserOrders } from "@/lib/db";
+import { loadDb, fmtMoney, fmtDate, currentUserOrders, orderTotal, balanceDue } from "@/lib/db";
 import { motion } from "framer-motion";
 import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -74,8 +74,8 @@ export function Dashboard() {
     : [
         ["Current Orders", orders.filter(o => o.status !== "Delivered").length, Package, "text-primary"],
         ["Completed", completed, CheckCircle2, "text-success"],
-        ["Invoices", db.invoices.filter(i => i.clientId === user!.clientId).length, DollarSign, "text-primary"],
-        ["Pending Payment", db.invoices.filter(i => i.clientId === user!.clientId && !i.paid).length, TrendingUp, "text-warning"],
+        ["Invoices", fmtMoney(orders.reduce((s, o) => s + orderTotal(o), 0)), DollarSign, "text-primary"],
+        ["Pending Payment", fmtMoney(orders.reduce((s, o) => s + balanceDue(o), 0)), TrendingUp, "text-warning"],
       ];
 
   return (
