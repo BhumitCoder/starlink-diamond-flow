@@ -85,6 +85,11 @@ export interface Order {
   productSize?: string;
   productColor?: string;   // "Yellow" | "Rose" | "White"
   productKarats?: string;  // "14K" | "18K" | "22K" | "24K"
+  // Delivery preference
+  deliveryTime?: string;
+  // Finishing options
+  rhodium?: string;   // "No Rhodium" | "Diamond Part White" | "Full White" | "Other"
+  stamping?: string;  // "No Stamping" | "KT Stamping" | "Diamond Weight + KT Stamp" | "Other"
   // CAD design image (uploaded after CAD Approved step)
   cadImage?: string;
   // Dispatch info

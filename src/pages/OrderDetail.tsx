@@ -249,17 +249,19 @@ export function OrderDetailPage() {
           {([
             ["Quantity", `${order.quantity} pcs`],
             ["Diamond", `${order.diamondWeight} ct (${order.diamondType})`],
-            ["Metal Weight", `${order.metalWeight} g`],
             ["Priority", order.priority],
             ["Order Value", fmtMoney(order.amount)],
             ["Shipping", (order.shippingCharge || 0) > 0 ? fmtMoney(order.shippingCharge) : "—"],
-            ["Expected", fmtDate(order.expectedDelivery)],
+            ["Delivery Date", fmtDate(order.expectedDelivery)],
             ["Assigned to", employee?.name || "—"],
             ["Created", fmtDate(order.createdAt)],
-            ...(order.designNumber ? [["Design Number", order.designNumber]] : []),
-            ...(order.productColor  ? [["Color", order.productColor]]  : []),
-            ...(order.productKarats ? [["Karats", order.productKarats]] : []),
-            ...(order.productSize   ? [["Product Size", order.productSize]]  : []),
+            ...(order.designNumber  ? [["Design Number",  order.designNumber]]  : []),
+            ...(order.productColor  ? [["Color",          order.productColor]]  : []),
+            ...(order.productKarats ? [["Karats",         order.productKarats]] : []),
+            ...(order.productSize   ? [["Product Size",   order.productSize]]   : []),
+            ...(order.deliveryTime  ? [["Delivery Time",  order.deliveryTime]]  : []),
+            ...(order.rhodium       ? [["Rhodium",        order.rhodium]]       : []),
+            ...(order.stamping      ? [["Stamping",       order.stamping]]      : []),
           ] as [string, string][]).map(([k, v]) => (
             <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="font-medium mt-0.5">{v}</p></div>
           ))}

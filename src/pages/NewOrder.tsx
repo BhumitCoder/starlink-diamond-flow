@@ -10,8 +10,9 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { DollarSign, Building2, ImagePlus, X, Gem } from "lucide-react";
+import { DollarSign, Building2, ImagePlus, X, Gem, Clock } from "lucide-react";
 
 /** Compress a File to a base64 JPEG ≤800px, quality 0.75 */
 async function compressImage(file: File): Promise<string> {
@@ -74,6 +75,9 @@ export function NewOrderPage() {
     productSize: "",
     productColor: "",
     productKarats: "",
+    deliveryTime: "",
+    rhodium: "",
+    stamping: "",
 
     /* order value — editable, pre-seeded from auto-calc */
     orderValue: Math.round(0.5 * diamondRate),
@@ -144,6 +148,12 @@ export function NewOrderPage() {
       toast.error("Please enter a valid order value.");
       return;
     }
+    if (!f.designNumber.trim()) { toast.error("Design Number is required."); return; }
+    if (!f.productSize.trim())  { toast.error("Product Size is required."); return; }
+    if (!f.productColor)        { toast.error("Color of Product is required."); return; }
+    if (!f.productKarats)       { toast.error("Karats of Product is required."); return; }
+    if (!f.rhodium)             { toast.error("Please select a Rhodium option."); return; }
+    if (!f.stamping)            { toast.error("Please select a Stamping option."); return; }
 
     setSaving(true);
     const clientId = isClient ? user!.clientId! : f.clientId;
@@ -168,6 +178,9 @@ export function NewOrderPage() {
         productSize: f.productSize || undefined,
         productColor: f.productColor || undefined,
         productKarats: f.productKarats || undefined,
+        deliveryTime: f.deliveryTime || undefined,
+        rhodium: f.rhodium || undefined,
+        stamping: f.stamping || undefined,
         instructions: f.instructions,
         expectedDelivery: f.expectedDelivery || new Date(Date.now() + 45 * 86400000).toISOString(),
         priority: f.priority as Order["priority"],
@@ -337,11 +350,6 @@ export function NewOrderPage() {
                 className="rounded-xl h-11" />
             </Field>
 
-            <Field label="Expected Delivery">
-              <Input type="date" value={f.expectedDelivery}
-                onChange={e => set("expectedDelivery", e.target.value)}
-                className="rounded-xl h-11" />
-            </Field>
           </div>
 
           <Field label="Special Instructions">
@@ -409,22 +417,39 @@ export function NewOrderPage() {
             </div>
             <div>
               <h2 className="font-semibold text-brand-dark">Product Specifications</h2>
-              <p className="text-xs text-muted-foreground">Design details for manufacturing</p>
+              <p className="text-xs text-muted-foreground">Design details required for manufacturing</p>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <Field label="Design Number">
+          {/* Row 1 — Design Number */}
+          <Field label="Design Number *">
+            <Input
+              value={f.designNumber}
+              onChange={e => set("designNumber", e.target.value)}
+              className="rounded-xl h-11"
+              placeholder="e.g. SL-2024-001"
+              required
+            />
+          </Field>
+
+          {/* Row 2 — Product Size */}
+          <div className="space-y-1">
+            <Field label="Product Size *">
               <Input
-                value={f.designNumber}
-                onChange={e => set("designNumber", e.target.value)}
+                value={f.productSize}
+                onChange={e => set("productSize", e.target.value)}
                 className="rounded-xl h-11"
-                placeholder="e.g. SL-2024-001"
+                placeholder="e.g. Ring size 7, Bracelet 18cm, Chain 20 inches"
+                required
               />
             </Field>
+            <p className="text-xs text-muted-foreground pl-0.5">Note: Any Ring Size, Bracelet Size or Chain Details Please Mention Here</p>
+          </div>
 
-            <Field label="Color of Product">
-              <Select value={f.productColor} onValueChange={v => set("productColor", v)}>
+          {/* Row 3 — Color + Karats */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Color of Product *">
+              <Select value={f.productColor} onValueChange={v => set("productColor", v)} required>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select color…" /></SelectTrigger>
                 <SelectContent>
                   {["Yellow", "Rose", "White"].map(x =>
@@ -433,8 +458,8 @@ export function NewOrderPage() {
               </Select>
             </Field>
 
-            <Field label="Karats of Product">
-              <Select value={f.productKarats} onValueChange={v => set("productKarats", v)}>
+            <Field label="Karats of Product *">
+              <Select value={f.productKarats} onValueChange={v => set("productKarats", v)} required>
                 <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select karats…" /></SelectTrigger>
                 <SelectContent>
                   {["14K", "18K", "22K", "24K"].map(x =>
@@ -442,18 +467,77 @@ export function NewOrderPage() {
                 </SelectContent>
               </Select>
             </Field>
+          </div>
 
-            <div className="space-y-1.5 md:col-span-2">
-              <Field label="Product Size">
+          {/* Row 4 — Delivery Preference */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" /> Delivery Preference
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Field label="Delivery Date">
                 <Input
-                  value={f.productSize}
-                  onChange={e => set("productSize", e.target.value)}
+                  type="date"
+                  value={f.expectedDelivery}
+                  onChange={e => set("expectedDelivery", e.target.value)}
                   className="rounded-xl h-11"
-                  placeholder="e.g. Ring size 7, Bracelet 18cm, Chain 20 inches"
                 />
               </Field>
-              <p className="text-xs text-muted-foreground pl-0.5">Note: Any Ring Size, Bracelet Size or Chain Details Please Mention Here</p>
+              <Field label="Delivery Time">
+                <Input
+                  type="time"
+                  value={f.deliveryTime}
+                  onChange={e => set("deliveryTime", e.target.value)}
+                  className="rounded-xl h-11"
+                />
+              </Field>
             </div>
+          </div>
+
+          {/* Row 5 — Rhodium */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Rhodium *</p>
+            <RadioGroup
+              value={f.rhodium}
+              onValueChange={v => set("rhodium", v)}
+              className="grid grid-cols-2 md:grid-cols-4 gap-2"
+            >
+              {["No Rhodium", "Diamond Part White", "Full White", "Other"].map(opt => (
+                <label
+                  key={opt}
+                  className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors text-sm
+                    ${f.rhodium === opt
+                      ? "border-primary bg-primary/5 text-primary font-medium"
+                      : "border-border hover:border-primary/40 hover:bg-secondary/60"}`}
+                >
+                  <RadioGroupItem value={opt} id={`rhodium-${opt}`} />
+                  {opt}
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          {/* Row 6 — Stamping */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Stamping *</p>
+            <RadioGroup
+              value={f.stamping}
+              onValueChange={v => set("stamping", v)}
+              className="grid grid-cols-2 md:grid-cols-4 gap-2"
+            >
+              {["No Stamping", "KT Stamping", "Diamond Weight + KT Stamp", "Other"].map(opt => (
+                <label
+                  key={opt}
+                  className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors text-sm
+                    ${f.stamping === opt
+                      ? "border-primary bg-primary/5 text-primary font-medium"
+                      : "border-border hover:border-primary/40 hover:bg-secondary/60"}`}
+                >
+                  <RadioGroupItem value={opt} id={`stamping-${opt}`} />
+                  {opt}
+                </label>
+              ))}
+            </RadioGroup>
           </div>
         </div>
 
