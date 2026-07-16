@@ -28,7 +28,7 @@ const CATEGORY_BG: Record<ExpenseCategory, string> = {
   Other:         "bg-gray-500/10 text-gray-600",
 };
 
-const EMPTY_FORM = { title: "", amount: "", category: "Other" as ExpenseCategory, note: "" };
+const EMPTY_FORM = { title: "", amount: "", category: "Other" as ExpenseCategory, note: "", clientId: "" };
 
 export function ExpensesPage() {
   const { user } = useAuth();
@@ -37,6 +37,7 @@ export function ExpensesPage() {
   const [showAdd, setShowAdd] = useState(false);
   // "My Expenses" tab employee filter (admin only) — defaults to own id
   const [mineFilter, setMineFilter] = useState<string>("self");
+  const [mineClientFilter, setMineClientFilter] = useState<string>("all");
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -60,18 +61,19 @@ export function ExpensesPage() {
     [db.users]
   );
 
-  // "My Expenses" tab list — for employee always own; for admin respects mineFilter
+  // "My Expenses" tab list — for employee always own; for admin respects mineFilter + mineClientFilter
   const myExpenses = useMemo(() => {
     let list = [...db.expenses];
     if (isAdmin) {
       if (mineFilter === "self") list = list.filter(e => e.employeeId === user?.id);
       else if (mineFilter !== "all") list = list.filter(e => e.employeeId === mineFilter);
-      // "all" → no filter
+      // "all" → no employee filter
+      if (mineClientFilter !== "all") list = list.filter(e => e.clientId === mineClientFilter);
     } else {
       list = list.filter(e => e.employeeId === user?.id);
     }
     return list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [db.expenses, user?.id, isAdmin, mineFilter]);
+  }, [db.expenses, user?.id, isAdmin, mineFilter, mineClientFilter]);
 
   // Passbook (admin only) with filters applied
   const passbookExpenses = useMemo(() => {
@@ -123,6 +125,7 @@ export function ExpensesPage() {
       category: form.category,
       note: form.note.trim() || undefined,
       employeeId: user!.id,
+      clientId: form.clientId || undefined,
       createdAt: new Date().toISOString(),
     };
     const fresh = loadDb();
@@ -233,14 +236,15 @@ export function ExpensesPage() {
       {/* ── My Expenses list ── */}
       {(isEmployee || (isAdmin && tab === "mine")) && (
         <div className="space-y-3">
-          {/* Admin: employee filter dropdown */}
+          {/* Admin: employee + client filter row */}
           {isAdmin && (
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Employee picker */}
               <div className="flex items-center gap-2 bg-white border border-border/80 rounded-xl px-3 h-9 text-sm">
                 <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <select
                   value={mineFilter}
-                  onChange={e => setMineFilter(e.target.value)}
+                  onChange={e => { setMineFilter(e.target.value); setMineClientFilter("all"); }}
                   className="bg-transparent border-none outline-none text-sm text-foreground"
                 >
                   <option value="self">My Expenses</option>
@@ -254,12 +258,30 @@ export function ExpensesPage() {
                     ))}
                 </select>
               </div>
+
+              {/* Client picker — only when viewing all or a specific employee */}
               {mineFilter !== "self" && (
+                <div className="flex items-center gap-2 bg-white border border-border/80 rounded-xl px-3 h-9 text-sm">
+                  <select
+                    value={mineClientFilter}
+                    onChange={e => setMineClientFilter(e.target.value)}
+                    className="bg-transparent border-none outline-none text-sm text-foreground"
+                  >
+                    <option value="all">All Clients</option>
+                    {db.clients.map(c => (
+                      <option key={c.id} value={c.id}>{c.companyName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Reset link */}
+              {(mineFilter !== "self" || mineClientFilter !== "all") && (
                 <button
-                  onClick={() => setMineFilter("self")}
+                  onClick={() => { setMineFilter("self"); setMineClientFilter("all"); }}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <X className="h-3 w-3" /> Reset to my expenses
+                  <X className="h-3 w-3" /> Reset
                 </button>
               )}
             </div>
@@ -270,6 +292,7 @@ export function ExpensesPage() {
             total={myTotal}
             showEmployee={isAdmin && mineFilter !== "self"}
             users={db.users}
+            clients={db.clients}
             onDelete={handleDelete}
             currentUserId={user!.id}
           />
@@ -362,6 +385,7 @@ export function ExpensesPage() {
             total={passbookTotal}
             showEmployee={true}
             users={db.users}
+            clients={db.clients}
             onDelete={handleDelete}
             currentUserId={user!.id}
           />
@@ -463,6 +487,26 @@ export function ExpensesPage() {
                   </div>
                 </div>
 
+                {/* Related Client */}
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">
+                    Related Client <span className="text-muted-foreground font-normal">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={form.clientId}
+                      onChange={e => setForm(f => ({ ...f, clientId: e.target.value }))}
+                      className="w-full px-3 h-10 rounded-xl border border-border bg-secondary/40 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition appearance-none pr-8"
+                    >
+                      <option value="">No client</option>
+                      {db.clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.companyName}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+
                 {/* Note */}
                 <div>
                   <label className="text-sm font-medium text-foreground mb-1.5 block">
@@ -508,11 +552,12 @@ interface ExpenseListProps {
   total: number;
   showEmployee: boolean;
   users: any[];
+  clients: any[];
   onDelete: (id: string) => void;
   currentUserId: string;
 }
 
-function ExpenseList({ expenses, total, showEmployee, users, onDelete, currentUserId }: ExpenseListProps) {
+function ExpenseList({ expenses, total, showEmployee, users, clients, onDelete, currentUserId }: ExpenseListProps) {
   return (
     <div className="card-luxe overflow-hidden">
       {/* Summary bar */}
@@ -541,6 +586,7 @@ function ExpenseList({ expenses, total, showEmployee, users, onDelete, currentUs
       <div className="divide-y divide-border/40">
         {expenses.map((exp, i) => {
           const addedBy = users.find(u => u.id === exp.employeeId);
+          const relatedClient = exp.clientId ? clients.find(c => c.id === exp.clientId) : null;
           const canDelete = exp.employeeId === currentUserId;
           return (
             <motion.div
@@ -570,6 +616,11 @@ function ExpenseList({ expenses, total, showEmployee, users, onDelete, currentUs
                   </span>
                   {showEmployee && addedBy && (
                     <span className="text-[11px] text-muted-foreground font-medium">{addedBy.name}</span>
+                  )}
+                  {relatedClient && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 ring-1 ring-violet-200">
+                      {relatedClient.companyName}
+                    </span>
                   )}
                   <span className="text-[11px] text-muted-foreground">{fmtDate(exp.createdAt)}</span>
                 </div>

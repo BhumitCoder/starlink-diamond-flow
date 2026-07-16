@@ -148,6 +148,7 @@ export interface Expense {
   category: ExpenseCategory;
   note?: string;
   employeeId: string; // userId of admin or employee who added it
+  clientId?: string;  // optional: which client this expense relates to
   createdAt: string;
 }
 
