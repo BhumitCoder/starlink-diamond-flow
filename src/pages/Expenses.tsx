@@ -35,6 +35,8 @@ export function ExpensesPage() {
   const [db, setDb] = useState(() => loadDb());
   const [tab, setTab] = useState<"mine" | "passbook">("mine");
   const [showAdd, setShowAdd] = useState(false);
+  // "My Expenses" tab employee filter (admin only) — defaults to own id
+  const [mineFilter, setMineFilter] = useState<string>("self");
   const [filterEmployee, setFilterEmployee] = useState("all");
   const [filterCategory, setFilterCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -58,14 +60,18 @@ export function ExpensesPage() {
     [db.users]
   );
 
-  // My own expenses (sorted newest first)
-  const myExpenses = useMemo(
-    () =>
-      [...db.expenses]
-        .filter(e => e.employeeId === user?.id)
-        .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
-    [db.expenses, user?.id]
-  );
+  // "My Expenses" tab list — for employee always own; for admin respects mineFilter
+  const myExpenses = useMemo(() => {
+    let list = [...db.expenses];
+    if (isAdmin) {
+      if (mineFilter === "self") list = list.filter(e => e.employeeId === user?.id);
+      else if (mineFilter !== "all") list = list.filter(e => e.employeeId === mineFilter);
+      // "all" → no filter
+    } else {
+      list = list.filter(e => e.employeeId === user?.id);
+    }
+    return list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }, [db.expenses, user?.id, isAdmin, mineFilter]);
 
   // Passbook (admin only) with filters applied
   const passbookExpenses = useMemo(() => {
@@ -226,14 +232,48 @@ export function ExpensesPage() {
 
       {/* ── My Expenses list ── */}
       {(isEmployee || (isAdmin && tab === "mine")) && (
-        <ExpenseList
-          expenses={myExpenses}
-          total={myTotal}
-          showEmployee={false}
-          users={db.users}
-          onDelete={handleDelete}
-          currentUserId={user!.id}
-        />
+        <div className="space-y-3">
+          {/* Admin: employee filter dropdown */}
+          {isAdmin && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2 bg-white border border-border/80 rounded-xl px-3 h-9 text-sm">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <select
+                  value={mineFilter}
+                  onChange={e => setMineFilter(e.target.value)}
+                  className="bg-transparent border-none outline-none text-sm text-foreground"
+                >
+                  <option value="self">My Expenses</option>
+                  <option value="all">All Employees</option>
+                  {staffUsers
+                    .filter(u => u.id !== user!.id)
+                    .map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              {mineFilter !== "self" && (
+                <button
+                  onClick={() => setMineFilter("self")}
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" /> Reset to my expenses
+                </button>
+              )}
+            </div>
+          )}
+
+          <ExpenseList
+            expenses={myExpenses}
+            total={myTotal}
+            showEmployee={isAdmin && mineFilter !== "self"}
+            users={db.users}
+            onDelete={handleDelete}
+            currentUserId={user!.id}
+          />
+        </div>
       )}
 
       {/* ── Admin passbook ── */}
