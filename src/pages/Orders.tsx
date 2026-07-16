@@ -120,46 +120,56 @@ export function OrdersPage() {
                 </div>
               </div>
 
-              {/* ── Row 2: step info / courier · amount · track btn ── */}
-              <div className="mt-2 ml-[52px] flex items-end justify-between gap-3">
+              {/* ── Row 2: progress % · due date · current step ── */}
+              <div className="mt-2 ml-[52px] flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">
                     {progress}% · Due {fmtDate(o.expectedDelivery)}
                   </p>
-                  {isActive && (
+                  {isActive && !o.courierName && (
                     <p className="text-[11px] font-medium text-primary flex items-center gap-1 mt-0.5">
                       <Truck className="h-3 w-3 shrink-0" />
                       <span className="truncate">{lastTrackingStep(o)}</span>
                     </p>
                   )}
-                  {hasShipping && o.courierName && (
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 flex-wrap">
-                      <Truck className="h-3 w-3 shrink-0" />
-                      <span>{o.courierName}</span>
-                      {o.trackingNumber && <span className="font-mono">{o.trackingNumber}</span>}
-                      {o.trackingLink && (
-                        <a href={o.trackingLink} target="_blank" rel="noopener noreferrer"
+                </div>
+                <span className="font-semibold text-sm shrink-0">{fmtMoney(o.amount)}</span>
+              </div>
+
+              {/* ── Row 3: courier + tracking — shown whenever dispatch info exists ── */}
+              {o.courierName && (
+                <div className="mt-2 ml-[52px]">
+                  <div className="flex items-center justify-between gap-3 rounded-xl bg-secondary/60 border border-border/60 px-3 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Truck className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-xs font-semibold text-foreground capitalize">{o.courierName}</span>
+                      {o.trackingNumber && (
+                        <span className="text-xs font-mono text-muted-foreground truncate">{o.trackingNumber}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {o.trackingLink ? (
+                        <a
+                          href={o.trackingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           onClick={e => e.stopPropagation()}
-                          className="text-primary hover:underline inline-flex items-center gap-0.5">
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg px-2.5 py-1 transition-colors"
+                        >
                           <ExternalLink className="h-3 w-3" /> Track
                         </a>
+                      ) : (
+                        <button
+                          onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 rounded-lg px-2.5 py-1 transition-colors"
+                        >
+                          <Truck className="h-3 w-3" /> Track
+                        </button>
                       )}
-                    </p>
-                  )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="font-semibold text-sm">{fmtMoney(o.amount)}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg h-8 px-2.5 gap-1 text-xs shrink-0"
-                    onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
-                  >
-                    <Truck className="h-3 w-3" />
-                    <span className="hidden sm:inline">Track</span>
-                  </Button>
-                </div>
-              </div>
+              )}
             </Link>
           );
         })}
