@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { loadDb, fmtMoney, fmtDate, currentUserOrders, orderTotal, balanceDue } from "@/lib/db";
 import { motion } from "framer-motion";
-import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck, Wallet, TrendingDown, Receipt } from "lucide-react";
+import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck, Wallet, TrendingDown, Receipt, BadgeCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { StatCard } from "@/components/StatCard";
@@ -68,6 +68,11 @@ export function Dashboard() {
       .reduce((s, o) => s + o.amount, 0);
   }, [db.orders, user]);
   const myProfit = myRevenue - myExpenseTotal;
+
+  // Admin: certificate stats
+  const certOrders = db.orders.filter(o => o.certificate === true);
+  const certCount  = certOrders.length;
+  const certIncome = certOrders.reduce((s, o) => s + (o.certificateFee || 0), 0);
 
   // Admin: total expenses across all staff, per-employee breakdown
   const allExpenses = db.expenses ?? [];
@@ -161,6 +166,34 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Admin: Certificate Overview ── */}
+      {user!.role === "admin" && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="card-luxe p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-9 w-9 rounded-xl bg-amber-50 grid place-items-center shrink-0">
+              <BadgeCheck className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-brand-dark">Certificate Summary</h3>
+              <p className="text-xs text-muted-foreground">Orders with diamond / jewellery certificates</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
+              <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1">Total Certificates</p>
+              <p className="text-3xl font-bold text-amber-800">{certCount}</p>
+              <p className="text-[11px] text-amber-600/80 mt-1">order{certCount !== 1 ? "s" : ""} issued</p>
+            </div>
+            <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
+              <p className="text-xs font-medium text-amber-700 uppercase tracking-wide mb-1">Certificate Income</p>
+              <p className="text-3xl font-bold text-amber-800">{fmtMoney(certIncome)}</p>
+              <p className="text-[11px] text-amber-600/80 mt-1">$50 × {certCount} certificate{certCount !== 1 ? "s" : ""}</p>
+            </div>
+          </div>
+        </motion.div>
       )}
 
       {/* ── Admin: Expenses Overview ── */}
