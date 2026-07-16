@@ -28,7 +28,7 @@ export function InvoicesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
-      <h1 className="font-display text-3xl text-brand-dark">Invoices</h1>
+      <h1 className="font-display text-2xl md:text-3xl text-brand-dark">Invoices</h1>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

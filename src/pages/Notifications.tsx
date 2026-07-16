@@ -43,7 +43,7 @@ export function NotificationsPage() {
     <div className="max-w-3xl mx-auto space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-brand-dark">Notifications</h1>
+          <h1 className="font-display text-2xl md:text-3xl text-brand-dark">Notifications</h1>
           <p className="text-sm text-muted-foreground">{unread} unread · {total} total</p>
         </div>
         {unread > 0 && (

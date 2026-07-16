@@ -135,33 +135,47 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="card-luxe p-5">
-        <div className="flex items-center justify-between mb-4">
+      <div className="card-luxe p-4 md:p-5">
+        <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Recent Orders</h3>
           <Link to="/orders" className="text-sm text-primary flex items-center gap-1 hover:underline">View all <ArrowRight className="h-3 w-3" /></Link>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
           {recent.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">No orders yet.</p>}
-          {recent.map(o => (
-            <Link key={o.id} to={`/orders/${o.id}`} className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/10 to-brand-light/10 grid place-items-center">
-                <Package className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm truncate">{o.orderNumber} — {o.jewelleryType}</p>
-                <p className="text-xs text-muted-foreground">{db.clients.find(c => c.id === o.clientId)?.companyName} · {fmtDate(o.createdAt)}{o.designNumber ? ` · Design #${o.designNumber}` : ""}</p>
-              </div>
-              <div className="text-sm font-semibold shrink-0">{fmtMoney(o.amount)}</div>
-              <div className="flex flex-col items-end gap-1">
-                <StatusBadge status={o.status} />
-                {o.status !== "Delivered" && o.status !== "Rejected" && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-primary whitespace-nowrap">
-                    <Truck className="h-3 w-3" /> {lastTrackingStep(o)}
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
+          {recent.map(o => {
+            const clientName = db.clients.find(c => c.id === o.clientId)?.companyName;
+            const isActive = !["Delivered","Rejected"].includes(o.status);
+            return (
+              <Link key={o.id} to={`/orders/${o.id}`}
+                className="flex items-start gap-3 p-3 rounded-xl hover:bg-secondary active:bg-secondary/70 transition">
+                <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary/10 to-brand-light/10 grid place-items-center shrink-0 mt-0.5">
+                  <Package className="h-4 w-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  {/* Row 1: order# + status */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-medium text-sm truncate">{o.orderNumber} · {o.jewelleryType}</p>
+                    <StatusBadge status={o.status} />
+                  </div>
+                  {/* Row 2: client + date */}
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">
+                    {clientName && <span>{clientName} · </span>}{fmtDate(o.createdAt)}
+                    {o.designNumber ? ` · #${o.designNumber}` : ""}
+                  </p>
+                  {/* Row 3: amount + tracking step */}
+                  <div className="flex items-center justify-between mt-1.5 gap-2">
+                    <span className="text-sm font-semibold text-brand-dark">{fmtMoney(o.amount)}</span>
+                    {isActive && (
+                      <span className="flex items-center gap-1 text-[11px] font-medium text-primary">
+                        <Truck className="h-3 w-3 shrink-0" />
+                        <span className="truncate max-w-[120px]">{lastTrackingStep(o)}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </div>

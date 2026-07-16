@@ -14,7 +14,6 @@ import type { Order } from "@/lib/db";
 
 const PAGE_SIZE = 10;
 
-/** Most recent tracking step: whichever step is in progress, else the last completed one, else the first step. */
 function lastTrackingStep(o: Order): string {
   const inProgress = o.timeline.find(t => t.status === "in_progress");
   if (inProgress) return inProgress.step;
@@ -43,105 +42,133 @@ export function OrdersPage() {
   const { paged, page, setPage, totalPages, total, start, end } = usePagination(orders, PAGE_SIZE);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
+    <div className="max-w-7xl mx-auto space-y-4">
+
+      {/* ── Page header ── */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="font-display text-3xl text-brand-dark">Orders</h1>
+          <h1 className="font-display text-2xl md:text-3xl text-brand-dark">Orders</h1>
           <p className="text-sm text-muted-foreground">{total} order{total !== 1 ? "s" : ""}</p>
         </div>
         {(user!.role === "client" || user!.role === "admin") && (
-          <Button asChild className="btn-hero h-11 rounded-xl px-5">
-            <Link to="/orders/new"><Plus className="h-4 w-4 mr-2" />New Order</Link>
+          <Button asChild className="btn-hero h-10 rounded-xl px-4 text-sm">
+            <Link to="/orders/new"><Plus className="h-4 w-4 mr-1.5" />New Order</Link>
           </Button>
         )}
       </div>
 
-      <div className="card-luxe p-4 flex flex-col sm:flex-row gap-3">
+      {/* ── Search + filter ── */}
+      <div className="card-luxe p-3 flex flex-col sm:flex-row gap-2.5">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders..." className="pl-9 h-11 rounded-xl" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders…" className="pl-9 h-10 rounded-xl" />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-full sm:w-48 h-11 rounded-xl"><Filter className="h-4 w-4 mr-2" /><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44 h-10 rounded-xl">
+            <Filter className="h-3.5 w-3.5 mr-2 shrink-0" /><SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
             {["Waiting","Approved","In Production","Ready","Dispatched","Delivered","Rejected"].map(s =>
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            )}
+              <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
 
+      {/* ── Order cards ── */}
       <div className="grid gap-3">
         {paged.map(o => {
           const client = db.clients.find(c => c.id === o.clientId);
-          const progress = Math.round(o.timeline.filter(t => t.status === "done").length / o.timeline.length * 100);
+          const done   = o.timeline.filter(t => t.status === "done").length;
+          const progress = Math.round(done / o.timeline.length * 100);
+          const isActive = !["Delivered","Rejected"].includes(o.status);
+          const hasShipping = o.status === "Dispatched" || o.status === "Delivered";
+
           return (
-            <Link key={o.id} to={`/orders/${o.id}`} className="card-luxe p-4 md:p-5 hover:shadow-luxe hover:-translate-y-0.5 transition-all">
-              <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center shrink-0">
-                  <Package className="h-6 w-6 text-primary" />
+            <Link
+              key={o.id}
+              to={`/orders/${o.id}`}
+              className="card-luxe p-4 hover:shadow-luxe hover:-translate-y-0.5 transition-all block"
+            >
+              {/* ── Row 1: icon · order# · status ── */}
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/15 to-brand-light/15 grid place-items-center shrink-0 mt-0.5">
+                  <Package className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div className="min-w-0">
-                      <p className="font-semibold truncate">{o.orderNumber}</p>
-                      <p className="text-xs text-muted-foreground truncate">{o.jewelleryType} · {o.metal} · {o.diamondType} Diamond · {o.quantity} pcs{o.designNumber ? ` · Design #${o.designNumber}` : ""}</p>
-                      {user!.role !== "client" && <p className="text-xs text-muted-foreground mt-0.5">{client?.companyName}</p>}
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <StatusBadge status={o.status} />
-                        <span className="font-semibold text-sm">{fmtMoney(o.amount)}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-lg gap-1.5 h-8"
-                          onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
-                        >
-                          <Truck className="h-3.5 w-3.5" /> Track
-                        </Button>
-                      </div>
-                      {o.status !== "Delivered" && o.status !== "Rejected" && (
-                        <span className="flex items-center gap-1 text-xs font-medium text-success whitespace-nowrap">
-                          <Truck className="h-3 w-3" /> Last update: {lastTrackingStep(o)}
-                        </span>
-                      )}
-                      {(o.status === "Dispatched" || o.status === "Delivered") && o.courierName && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Truck className="h-3 w-3 shrink-0" />
-                          {o.courierName} · <span className="font-mono">{o.trackingNumber}</span>
-                          {o.trackingLink && (
-                            <a
-                              href={o.trackingLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={e => e.stopPropagation()}
-                              className="inline-flex items-center gap-0.5 text-primary hover:underline ml-1"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Track
-                            </a>
-                          )}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="font-semibold text-sm leading-tight">{o.orderNumber}</p>
+                    <StatusBadge status={o.status} />
                   </div>
-                  <div className="mt-3">
-                    <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-primary to-brand-light transition-all" style={{ width: `${progress}%` }} />
-                    </div>
-                    <div className="flex items-center justify-between mt-1.5 text-xs text-muted-foreground">
-                      <span>{progress}% complete</span>
-                      <span>Due {fmtDate(o.expectedDelivery)}</span>
-                    </div>
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {o.jewelleryType} · {o.metal} · {o.diamondType} · {o.quantity} pc{o.quantity !== 1 ? "s" : ""}
+                    {o.designNumber ? ` · #${o.designNumber}` : ""}
+                  </p>
+                  {user!.role !== "client" && client && (
+                    <p className="text-xs font-medium text-muted-foreground truncate mt-0.5">{client.companyName}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Progress bar ── */}
+              <div className="mt-3 ml-[52px]">
+                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-brand-light transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* ── Row 2: step info / courier · amount · track btn ── */}
+              <div className="mt-2 ml-[52px] flex items-end justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">
+                    {progress}% · Due {fmtDate(o.expectedDelivery)}
+                  </p>
+                  {isActive && (
+                    <p className="text-[11px] font-medium text-primary flex items-center gap-1 mt-0.5">
+                      <Truck className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{lastTrackingStep(o)}</span>
+                    </p>
+                  )}
+                  {hasShipping && o.courierName && (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5 flex-wrap">
+                      <Truck className="h-3 w-3 shrink-0" />
+                      <span>{o.courierName}</span>
+                      {o.trackingNumber && <span className="font-mono">{o.trackingNumber}</span>}
+                      {o.trackingLink && (
+                        <a href={o.trackingLink} target="_blank" rel="noopener noreferrer"
+                          onClick={e => e.stopPropagation()}
+                          className="text-primary hover:underline inline-flex items-center gap-0.5">
+                          <ExternalLink className="h-3 w-3" /> Track
+                        </a>
+                      )}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-semibold text-sm">{fmtMoney(o.amount)}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-lg h-8 px-2.5 gap-1 text-xs shrink-0"
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); setTrackingOrder(o); }}
+                  >
+                    <Truck className="h-3 w-3" />
+                    <span className="hidden sm:inline">Track</span>
+                  </Button>
                 </div>
               </div>
             </Link>
           );
         })}
+
         {total === 0 && (
-          <div className="card-luxe p-12 text-center text-muted-foreground">No orders match your filters.</div>
+          <div className="card-luxe p-12 text-center text-muted-foreground">
+            <Package className="h-10 w-10 mx-auto mb-3 opacity-20" />
+            <p>No orders match your filters.</p>
+          </div>
         )}
       </div>
 

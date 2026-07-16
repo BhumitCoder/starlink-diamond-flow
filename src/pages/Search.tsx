@@ -27,7 +27,7 @@ export function SearchPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <h1 className="font-display text-3xl text-brand-dark">Search</h1>
+      <h1 className="font-display text-2xl md:text-3xl text-brand-dark">Search</h1>
       <Input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Search orders, clients, employees, invoices..." className="rounded-xl h-12" />
       {q && <div className="space-y-4">
         <Section title="Orders" icon={Package} items={orders.map(o => ({ id: o.id, to: `/orders/${o.id}`, title: o.orderNumber, sub: `${o.jewelleryType} - ${o.status}${o.designNumber ? ` · Design #${o.designNumber}` : ""}` }))} />
