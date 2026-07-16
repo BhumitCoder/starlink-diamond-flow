@@ -97,6 +97,9 @@ export interface Order {
   courierName?: string;
   trackingNumber?: string;
   trackingLink?: string;
+  // Certificate
+  certificate?: boolean;
+  certificateFee?: number;  // always 50 when certificate is true
 }
 
 export interface Task {
@@ -208,9 +211,9 @@ export function totalAdvance(order: Order): number {
   return (order.advances || []).reduce((s, a) => s + a.amount, 0);
 }
 
-/** Jewellery value + shipping — the amount the client owes in full */
+/** Jewellery value + shipping + certificate fee — the amount the client owes in full */
 export function orderTotal(order: Order): number {
-  return order.amount + (order.shippingCharge || 0);
+  return order.amount + (order.shippingCharge || 0) + (order.certificateFee || 0);
 }
 
 export function balanceDue(order: Order): number {

@@ -225,6 +225,14 @@ export function OrderDetailPage() {
       doc.text(fmtMoney(shipping), 165, lineY);
     }
 
+    // Certificate fee line (only if applicable)
+    if (order.certificate && (order.certificateFee || 0) > 0) {
+      lineY += 10;
+      doc.text("Diamond / Jewellery Certificate", 20, lineY);
+      doc.text("—", 130, lineY);
+      doc.text(fmtMoney(order.certificateFee!), 165, lineY);
+    }
+
     // Totals
     doc.line(20, lineY + 6, 190, lineY + 6);
     doc.setFont("helvetica", "bold"); doc.setFontSize(11);
@@ -583,9 +591,13 @@ export function OrderDetailPage() {
         {/* Summary strip */}
         {(() => {
           const shipping = order.shippingCharge || 0;
-          const total = orderTotal(order);
+          const certFee  = order.certificateFee || 0;
+          const total    = orderTotal(order);
+          const extraCols = (shipping > 0 ? 1 : 0) + (certFee > 0 ? 1 : 0);
+          const totalCols = 2 + extraCols; // base 2 (advance + balance) + value col + extras
+          const gridCols = totalCols <= 3 ? "sm:grid-cols-3" : totalCols === 4 ? "sm:grid-cols-4" : "sm:grid-cols-5";
           return (
-            <div className={`grid gap-3 grid-cols-2 ${shipping > 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
+            <div className={`grid gap-3 grid-cols-2 ${gridCols}`}>
               <div className="p-3 rounded-xl bg-secondary text-center">
                 <p className="text-xs text-muted-foreground mb-1">Order Value</p>
                 <p className="font-semibold text-sm">{fmtMoney(order.amount)}</p>
@@ -594,6 +606,12 @@ export function OrderDetailPage() {
                 <div className="p-3 rounded-xl bg-secondary text-center">
                   <p className="text-xs text-muted-foreground mb-1">Shipping</p>
                   <p className="font-semibold text-sm">{fmtMoney(shipping)}</p>
+                </div>
+              )}
+              {certFee > 0 && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-center">
+                  <p className="text-xs text-muted-foreground mb-1">Certificate</p>
+                  <p className="font-semibold text-sm text-amber-700">{fmtMoney(certFee)}</p>
                 </div>
               )}
               <div className="p-3 rounded-xl bg-success/8 border border-success/20 text-center">
@@ -606,9 +624,10 @@ export function OrderDetailPage() {
                   {balance > 0 ? fmtMoney(balance) : "✓ Cleared"}
                 </p>
               </div>
-              {shipping > 0 && (
-                <div className="col-span-2 sm:col-span-4 px-1 pt-0.5 text-xs text-muted-foreground">
-                  Order Total (value + shipping): <span className="font-semibold text-foreground">{fmtMoney(total)}</span>
+              {(shipping > 0 || certFee > 0) && (
+                <div className={`col-span-2 ${gridCols.replace("sm:grid-cols-", "sm:col-span-")} px-1 pt-0.5 text-xs text-muted-foreground`}>
+                  Order Total: <span className="font-semibold text-foreground">{fmtMoney(total)}</span>
+                  {certFee > 0 && <span className="ml-1 text-amber-600">(incl. $50 certificate fee)</span>}
                 </div>
               )}
             </div>

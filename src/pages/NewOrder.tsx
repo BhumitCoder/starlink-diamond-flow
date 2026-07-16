@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import { DollarSign, Building2, ImagePlus, X, Gem, Clock, Sparkles, Truck, CreditCard, AlertCircle } from "lucide-react";
+import { DollarSign, Building2, ImagePlus, X, Gem, Clock, Sparkles, Truck, CreditCard, AlertCircle, BadgeCheck } from "lucide-react";
 
 /** Compress a File to a base64 JPEG ≤800px, quality 0.75 */
 async function compressImage(file: File): Promise<string> {
@@ -77,6 +77,7 @@ export function NewOrderPage() {
     shippingCharge: defaultShipping,
     advanceAmount: 0,
     advanceNote: "",
+    certificate: "no" as "yes" | "no",
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -153,6 +154,8 @@ export function NewOrderPage() {
         deliveryTime: f.deliveryTime || undefined,
         rhodium: f.rhodium || undefined,
         stamping: f.stamping || undefined,
+        certificate: f.certificate === "yes",
+        certificateFee: f.certificate === "yes" ? 50 : 0,
         instructions: f.instructions,
         expectedDelivery: f.expectedDelivery || new Date(Date.now() + 45 * 86400000).toISOString(),
         priority: f.priority as Order["priority"],
@@ -202,7 +205,8 @@ export function NewOrderPage() {
   };
 
   const shipping   = Number(f.shippingCharge) || 0;
-  const grandTotal = Number(f.orderValue) + shipping;
+  const certFee    = f.certificate === "yes" ? 50 : 0;
+  const grandTotal = Number(f.orderValue) + shipping + certFee;
   const balanceDue = Math.max(0, grandTotal - Number(f.advanceAmount));
   const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate);
 
@@ -447,7 +451,54 @@ export function NewOrderPage() {
           </div>
         </SectionCard>
 
-        {/* ══ 5. Order Value / Shipping / Advance — staff only ══ */}
+        {/* ══ 5. Certificate ══ */}
+        <SectionCard
+          icon={<BadgeCheck className="h-4 w-4 text-amber-600" />}
+          title="Certificate"
+          subtitle="Do you require a diamond/jewellery certificate with this order?"
+          iconBg="bg-amber-50"
+        >
+          <RadioGroup
+            value={f.certificate}
+            onValueChange={v => set("certificate", v)}
+            className="grid grid-cols-2 gap-3"
+          >
+            {(["no", "yes"] as const).map(opt => (
+              <label
+                key={opt}
+                className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all
+                  ${f.certificate === opt
+                    ? opt === "yes"
+                      ? "border-amber-400 bg-amber-50 text-amber-700 font-semibold shadow-sm"
+                      : "border-primary bg-primary/5 text-primary font-semibold shadow-sm"
+                    : "border-border hover:border-primary/40 hover:bg-secondary/60 active:bg-secondary/60"
+                  }`}
+              >
+                <RadioGroupItem value={opt} id={`cert-${opt}`} className="shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold capitalize">{opt === "yes" ? "Yes" : "No"}</p>
+                  <p className="text-xs text-muted-foreground font-normal leading-snug mt-0.5">
+                    {opt === "yes" ? "Certificate required" : "No certificate needed"}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </RadioGroup>
+
+          {f.certificate === "yes" && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <BadgeCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Certificate fee: $50.00</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  A <span className="font-bold">$50 certificate fee</span> will be added to this order's total and shown separately on the invoice.
+                </p>
+              </div>
+            </div>
+          )}
+        </SectionCard>
+
+        {/* ══ 6. Order Value / Shipping / Advance — staff only ══ */}
         {!isClient && (
           <>
             {/* Order Value */}
@@ -517,24 +568,29 @@ export function NewOrderPage() {
 
               {/* Balance summary — always 2×2 on mobile */}
               <div className="grid grid-cols-2 gap-2.5">
-                <BalanceTile label="Order Value" value={`$${Number(f.orderValue).toLocaleString()}`} />
-                <BalanceTile label="Shipping" value={shipping > 0 ? `$${shipping.toLocaleString()}` : "—"} />
+                <BalanceTile label="Order Value" value={`${Number(f.orderValue).toLocaleString()}`} />
+                <BalanceTile label="Shipping" value={shipping > 0 ? `${shipping.toLocaleString()}` : "—"} />
+                <BalanceTile
+                  label="Certificate Fee"
+                  value={certFee > 0 ? `${certFee.toLocaleString()}` : "—"}
+                  highlight={certFee > 0 ? "cert" : undefined}
+                />
                 <BalanceTile
                   label="Advance Paid"
-                  value={`$${Number(f.advanceAmount || 0).toLocaleString()}`}
+                  value={`${Number(f.advanceAmount || 0).toLocaleString()}`}
                   highlight={f.advanceAmount > 0 ? "success" : undefined}
                 />
                 <BalanceTile
                   label="Balance Due"
-                  value={balanceDue > 0 ? `$${balanceDue.toLocaleString()}` : "✓ Cleared"}
+                  value={balanceDue > 0 ? `${balanceDue.toLocaleString()}` : "✓ Cleared"}
                   highlight={balanceDue > 0 ? "danger" : "success"}
                 />
               </div>
 
               {/* Grand total line */}
-              {shipping > 0 && (
+              {(shipping > 0 || certFee > 0) && (
                 <p className="text-xs text-muted-foreground px-1">
-                  Grand total (order + shipping):&nbsp;
+                  Grand total (order{shipping > 0 ? " + shipping" : ""}{certFee > 0 ? " + certificate" : ""}):&nbsp;
                   <span className="font-semibold text-foreground">${grandTotal.toLocaleString()}</span>
                 </p>
               )}
@@ -604,17 +660,21 @@ function BalanceTile({
 }: {
   label: string;
   value: string;
-  highlight?: "success" | "danger";
+  highlight?: "success" | "danger" | "cert";
 }) {
   const bg = highlight === "success"
     ? "bg-success/8 border border-success/20"
     : highlight === "danger"
     ? "bg-destructive/5 border border-destructive/20"
+    : highlight === "cert"
+    ? "bg-amber-50 border border-amber-200"
     : "bg-secondary";
   const textColor = highlight === "success"
     ? "text-success"
     : highlight === "danger"
     ? "text-destructive"
+    : highlight === "cert"
+    ? "text-amber-700"
     : "text-brand-dark";
   return (
     <div className={`${bg} rounded-xl p-3 text-center`}>
