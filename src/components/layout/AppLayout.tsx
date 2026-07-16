@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle, ListTodo, MoreHorizontal, X, ChevronRight, Search as SearchIcon } from "lucide-react";
+import { LayoutDashboard, Package, Users, Briefcase, MessageSquare, Bell, FileText, BarChart3, Settings, Search, LogOut, Plus, User, ChevronDown, UserCircle, ListTodo, MoreHorizontal, X, ChevronRight, Search as SearchIcon, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadDb } from "@/lib/db";
@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { to: "/clients", label: "Clients", icon: Users, roles: ["admin","employee"] },
   { to: "/employees", label: "Employees", icon: Briefcase, roles: ["admin"] },
   { to: "/invoices", label: "Invoices", icon: FileText },
+  { to: "/expenses", label: "Expenses", icon: Wallet, roles: ["admin","employee"] },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
@@ -30,6 +31,7 @@ const MOBILE_NAV: NavItem[] = [
 /* Items shown inside the "More" drawer */
 const MORE_NAV: NavItem[] = [
   { to: "/invoices", label: "Invoices", icon: FileText },
+  { to: "/expenses", label: "Expenses", icon: Wallet, roles: ["admin","employee"] },
   { to: "/clients", label: "Clients", icon: Users, roles: ["admin","employee"] },
   { to: "/employees", label: "Employees", icon: Briefcase, roles: ["admin"] },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
@@ -46,6 +48,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/clients": "Clients",
   "/employees": "Employees",
   "/invoices": "Invoices",
+  "/expenses": "Expenses",
   "/messages": "Messages",
   "/notifications": "Notifications",
   "/reports": "Reports",
@@ -63,6 +66,7 @@ const ROLE_LABEL: Record<string, string> = {
 /* Color map for More drawer icons */
 const ICON_COLORS: Record<string, string> = {
   "/invoices":   "bg-blue-500/15 text-blue-600",
+  "/expenses":   "bg-rose-500/15 text-rose-600",
   "/clients":    "bg-violet-500/15 text-violet-600",
   "/employees":  "bg-orange-500/15 text-orange-600",
   "/reports":    "bg-emerald-500/15 text-emerald-600",

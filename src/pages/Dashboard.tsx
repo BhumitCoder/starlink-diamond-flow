@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { loadDb, fmtMoney, fmtDate, currentUserOrders, orderTotal, balanceDue } from "@/lib/db";
 import { motion } from "framer-motion";
-import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck } from "lucide-react";
+import { Package, Clock, CheckCircle2, Users, Briefcase, DollarSign, Factory, PackageCheck, TrendingUp, ArrowRight, Truck, Wallet, TrendingDown, Receipt } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LineChart, Line, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { StatCard } from "@/components/StatCard";
@@ -53,6 +53,37 @@ export function Dashboard() {
   const client = user?.role === "client" ? db.clients.find(c => c.id === user.clientId) : null;
   const recent = [...orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 6);
 
+  // ── Expense stats ──
+  const myExpenses = useMemo(
+    () => (db.expenses ?? []).filter(e => e.employeeId === user?.id),
+    [db.expenses, user?.id]
+  );
+  const myExpenseTotal = myExpenses.reduce((s, e) => s + e.amount, 0);
+
+  // Employee: revenue = value of their delivered assigned orders
+  const myRevenue = useMemo(() => {
+    if (user?.role !== "employee") return 0;
+    return db.orders
+      .filter(o => o.assignedEmployeeId === user.id && o.status === "Delivered")
+      .reduce((s, o) => s + o.amount, 0);
+  }, [db.orders, user]);
+  const myProfit = myRevenue - myExpenseTotal;
+
+  // Admin: total expenses across all staff, per-employee breakdown
+  const allExpenses = db.expenses ?? [];
+  const totalExpenses = allExpenses.reduce((s, e) => s + e.amount, 0);
+  const staffExpenseSummary = useMemo(() => {
+    const staff = db.users.filter(u => u.role === "admin" || u.role === "employee");
+    return staff
+      .map(u => ({
+        user: u,
+        total: allExpenses.filter(e => e.employeeId === u.id).reduce((s, e) => s + e.amount, 0),
+        count: allExpenses.filter(e => e.employeeId === u.id).length,
+      }))
+      .filter(s => s.count > 0)
+      .sort((a, b) => b.total - a.total);
+  }, [db.users, allExpenses]);
+
   const stats: [string, string | number, any, string][] = user!.role === "admin"
     ? [
         ["Today's Orders", todayOrders, Clock, "text-primary"],
@@ -93,6 +124,92 @@ export function Dashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* ── Employee: My Profit Panel ── */}
+      {user!.role === "employee" && (
+        <div className="card-luxe p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold">My Financial Summary</h3>
+            <Link to="/expenses" className="text-sm text-primary flex items-center gap-1 hover:underline">
+              Manage Expenses <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                <p className="text-xs font-medium text-emerald-700">Revenue</p>
+              </div>
+              <p className="text-lg font-bold text-emerald-700">{fmtMoney(myRevenue)}</p>
+              <p className="text-[11px] text-emerald-600/70 mt-0.5">Delivered orders</p>
+            </div>
+            <div className="rounded-xl bg-rose-50 border border-rose-100 p-3.5">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <TrendingDown className="h-3.5 w-3.5 text-rose-600" />
+                <p className="text-xs font-medium text-rose-700">Expenses</p>
+              </div>
+              <p className="text-lg font-bold text-rose-700">{fmtMoney(myExpenseTotal)}</p>
+              <p className="text-[11px] text-rose-600/70 mt-0.5">{myExpenses.length} entries</p>
+            </div>
+            <div className={`rounded-xl border p-3.5 ${myProfit >= 0 ? "bg-emerald-50 border-emerald-100" : "bg-rose-50 border-rose-100"}`}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Wallet className={`h-3.5 w-3.5 ${myProfit >= 0 ? "text-emerald-600" : "text-rose-600"}`} />
+                <p className={`text-xs font-medium ${myProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>Net Profit</p>
+              </div>
+              <p className={`text-lg font-bold ${myProfit >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{fmtMoney(myProfit)}</p>
+              <p className={`text-[11px] mt-0.5 ${myProfit >= 0 ? "text-emerald-600/70" : "text-rose-600/70"}`}>Revenue − Expenses</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Admin: Expenses Overview ── */}
+      {user!.role === "admin" && (
+        <div className="card-luxe p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold">Staff Expenses</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">Total: <span className="font-semibold text-destructive">{fmtMoney(totalExpenses)}</span> across {allExpenses.length} entries</p>
+            </div>
+            <Link to="/expenses?tab=passbook" className="text-sm text-primary flex items-center gap-1 hover:underline">
+              Full Passbook <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          {staffExpenseSummary.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2">
+              <Receipt className="h-8 w-8 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">No expenses recorded yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {staffExpenseSummary.map(({ user: u, total, count }) => {
+                const pct = totalExpenses > 0 ? (total / totalExpenses) * 100 : 0;
+                const initials = u.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
+                return (
+                  <div key={u.id} className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white text-xs font-bold grid place-items-center shrink-0">
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-foreground truncate">{u.name}</span>
+                        <span className="text-sm font-bold text-destructive tabular-nums ml-2">{fmtMoney(total)}</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-rose-400 transition-all duration-500"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{count} {count === 1 ? "entry" : "entries"} · {pct.toFixed(0)}%</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {user!.role === "admin" && (
         <div className="grid lg:grid-cols-3 gap-4">

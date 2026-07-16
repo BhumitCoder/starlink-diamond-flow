@@ -139,6 +139,18 @@ export interface Invoice {
   createdAt: string;
 }
 
+export type ExpenseCategory = "Travel" | "Food" | "Tools" | "Office" | "Communication" | "Other";
+
+export interface Expense {
+  id: string;
+  title: string;
+  amount: number;
+  category: ExpenseCategory;
+  note?: string;
+  employeeId: string; // userId of admin or employee who added it
+  createdAt: string;
+}
+
 export interface Settings {
   companyName: string;
   currency: string;
@@ -157,6 +169,7 @@ export interface DB {
   messages: Message[];
   notifications: Notification[];
   invoices: Invoice[];
+  expenses: Expense[];
   settings: Settings;
   session: { userId: string | null };
 }
@@ -164,7 +177,7 @@ export interface DB {
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -181,6 +194,7 @@ export function loadDb(): DB {
     db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], ...o }));
     db.orders.forEach(insertDiamondPurchaseStep);
     if (!db.tasks) db.tasks = [];
+    if (!db.expenses) db.expenses = [];
     // backward-compat: fill missing settings fields
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
     if (db.settings.metalRate == null) db.settings.metalRate = 65;
