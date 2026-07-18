@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  ArrowLeft, CheckCircle2, Circle, Loader2, Package, Download,
+  ArrowLeft, CheckCircle2, Circle, Loader2, Package, Printer,
   DollarSign, Plus, TrendingUp, AlertCircle, Wallet,
   ImagePlus, Truck, ExternalLink, Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
+import { printInvoice } from "@/lib/invoicePrint";
 
 /** Compress a File to a base64 JPEG ≤800px */
 async function compressImage(file: File): Promise<string> {
@@ -180,77 +180,11 @@ export function OrderDetailPage() {
     canEditStage() && dispStepIdx >= 0 && order.timeline[dispStepIdx].status !== "pending"
   );
 
-  const downloadInvoice = () => {
-    const adv      = totalAdvance(order);
-    const total    = orderTotal(order);
-    const bal      = balanceDue(order);
-    const shipping = order.shippingCharge || 0;
-
-    const doc = new jsPDF();
-    // Header
-    doc.setFont("helvetica", "bold"); doc.setFontSize(22);
-    doc.text("STARLINK JEWELS", 20, 25);
-    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text("Fine Diamond Jewelry - Manufactured in India - Exported to USA", 20, 32);
-    doc.setLineWidth(0.5); doc.line(20, 38, 190, 38);
-
-    // Invoice meta
-    doc.setFontSize(16); doc.setFont("helvetica", "bold");
-    doc.text("INVOICE", 20, 50);
-    doc.setFontSize(10); doc.setFont("helvetica", "normal");
-    doc.text(`Order #: ${order.orderNumber}`, 20, 60);
-    doc.text(`Date: ${fmtDate(order.createdAt)}`, 20, 66);
-    doc.text(`Bill To: ${client?.companyName || ""}`, 20, 76);
-    doc.text(`${client?.address || ""}`, 20, 82);
-    doc.text(`${client?.email || ""}  ${client?.phone || ""}`, 20, 88);
-
-    // Line items header
-    doc.line(20, 100, 190, 100);
-    doc.setFont("helvetica", "bold");
-    doc.text("Item", 20, 108); doc.text("Qty", 130, 108); doc.text("Amount", 165, 108);
-    doc.line(20, 112, 190, 112);
-
-    // Jewellery line
-    doc.setFont("helvetica", "normal");
-    doc.text(`${order.jewelleryType} - ${order.metal} - ${order.diamondType}`, 20, 121);
-    doc.text(String(order.quantity), 130, 121);
-    doc.text(fmtMoney(order.amount), 165, 121);
-
-    // Shipping line (only if > 0)
-    let lineY = 121;
-    if (shipping > 0) {
-      lineY += 10;
-      doc.text("Shipping & Freight", 20, lineY);
-      doc.text("—", 130, lineY);
-      doc.text(fmtMoney(shipping), 165, lineY);
-    }
-
-    // Certificate fee line (only if applicable)
-    if (order.certificate && (order.certificateFee || 0) > 0) {
-      lineY += 10;
-      doc.text("Diamond / Jewellery Certificate", 20, lineY);
-      doc.text("—", 130, lineY);
-      doc.text(fmtMoney(order.certificateFee!), 165, lineY);
-    }
-
-    // Totals
-    doc.line(20, lineY + 6, 190, lineY + 6);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(11);
-    doc.text("Order Total:", 120, lineY + 16);
-    doc.text(fmtMoney(total), 165, lineY + 16);
-
-    if (adv > 0) {
-      doc.setFont("helvetica", "normal"); doc.setFontSize(10);
-      doc.text("Advance Paid:", 120, lineY + 26);
-      doc.text(`- ${fmtMoney(adv)}`, 165, lineY + 26);
-      doc.setFont("helvetica", "bold"); doc.setFontSize(12);
-      doc.text("Balance Due:", 120, lineY + 38);
-      doc.text(fmtMoney(bal), 165, lineY + 38);
-    }
-
-    doc.setFontSize(9); doc.setFont("helvetica", "italic");
-    doc.text("Thank you for choosing Starlink Jewels.", 20, 260);
-    doc.save(`Invoice-${order.orderNumber}.pdf`);
+  const handlePrintInvoice = () => {
+    const inv = db.invoices.find(i => i.orderId === order.id);
+    const invNumber = inv?.number
+      ?? String(db.invoices.findIndex(i => i.orderId === order.id) + 1).padStart(4, "0");
+    printInvoice(order, client, db.settings, invNumber || "0001");
   };
 
   return (
@@ -273,7 +207,7 @@ export function OrderDetailPage() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={order.status} />
-            <Button variant="outline" onClick={downloadInvoice} className="rounded-xl"><Download className="h-4 w-4 mr-2" />Invoice</Button>
+            <Button variant="outline" onClick={handlePrintInvoice} className="rounded-xl"><Printer className="h-4 w-4 mr-2" />Print / Download Bill</Button>
           </div>
         </div>
 

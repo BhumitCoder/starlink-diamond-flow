@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { loadDb, saveDb } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -6,14 +6,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Diamond, Weight, Truck } from "lucide-react";
+import { Diamond, Weight, Truck, Upload, X, QrCode, Stamp, FileText } from "lucide-react";
+
+async function toBase64(file: File): Promise<string> {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onerror = rej;
+    r.onload = e => res(e.target?.result as string);
+    r.readAsDataURL(file);
+  });
+}
 
 export function SettingsPage() {
   const { user } = useAuth();
   const [db, setDb] = useState(loadDb());
 
+  const qr1Ref    = useRef<HTMLInputElement>(null);
+  const qr2Ref    = useRef<HTMLInputElement>(null);
+  const stampRef  = useRef<HTMLInputElement>(null);
+
   const save = () => { saveDb(db); toast.success("Settings saved"); };
   const saveRates = () => { saveDb(db); toast.success("Pricing rates updated"); };
+  const saveInvoice = () => { saveDb(db); toast.success("Invoice settings saved"); };
 
   const exp = () => {
     const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
@@ -43,7 +57,67 @@ export function SettingsPage() {
     location.reload();
   };
 
+  const handleImg = async (field: "invoiceQr1" | "invoiceQr2" | "invoiceStamp", file: File) => {
+    try {
+      const b64 = await toBase64(file);
+      setDb(prev => ({ ...prev, settings: { ...prev.settings, [field]: b64 } }));
+    } catch { toast.error("Failed to read image"); }
+  };
+
   const canEditRates = user?.role === "admin" || user?.role === "employee";
+
+  /* ── small preview card for uploaded images ── */
+  const ImgSlot = ({
+    label, icon: Icon, value, fieldKey, inputRef,
+  }: {
+    label: string;
+    icon: React.ElementType;
+    value?: string;
+    fieldKey: "invoiceQr1" | "invoiceQr2" | "invoiceStamp";
+    inputRef: React.RefObject<HTMLInputElement | null>;
+  }) => (
+    <div className="flex flex-col items-center gap-2">
+      <div
+        className="relative h-24 w-24 rounded-xl border-2 border-dashed border-border hover:border-primary/50 cursor-pointer overflow-hidden transition-colors group"
+        onClick={() => inputRef.current?.click()}
+      >
+        {value ? (
+          <>
+            <img src={value} alt={label} className="w-full h-full object-contain p-1" />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Upload className="h-5 w-5 text-white" />
+            </div>
+          </>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center gap-1 text-muted-foreground">
+            <Icon className="h-6 w-6" />
+            <span className="text-[10px] text-center px-1">Click to upload</span>
+          </div>
+        )}
+      </div>
+      {value && (
+        <button
+          type="button"
+          onClick={() => setDb(prev => ({ ...prev, settings: { ...prev.settings, [fieldKey]: undefined } }))}
+          className="flex items-center gap-1 text-xs text-destructive hover:underline"
+        >
+          <X className="h-3 w-3" /> Remove
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async e => {
+          const f = e.target.files?.[0];
+          if (f) await handleImg(fieldKey, f);
+          e.target.value = "";
+        }}
+      />
+      <p className="text-xs text-muted-foreground text-center leading-tight">{label}</p>
+    </div>
+  );
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
@@ -86,6 +160,120 @@ export function SettingsPage() {
           />
         </label>
         <Button onClick={save} className="btn-hero rounded-xl w-full">Save Settings</Button>
+      </div>
+
+      {/* ── Invoice Branding ── */}
+      <div className="card-luxe p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          <div>
+            <h3 className="font-semibold">Invoice / Bill Settings</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Address, QR codes and stamp shown on every printed bill</p>
+          </div>
+        </div>
+
+        {/* Address fields */}
+        <div className="grid grid-cols-1 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Address Line 1 (Street)</Label>
+            <Input
+              value={db.settings.invoiceAddress1 ?? ""}
+              onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceAddress1: e.target.value } })}
+              placeholder="55 JOHN ST"
+              className="rounded-xl"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">City / Area</Label>
+              <Input
+                value={db.settings.invoiceAddress2 ?? ""}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceAddress2: e.target.value } })}
+                placeholder="EAST RUTHERFORD"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">State &amp; ZIP</Label>
+              <Input
+                value={db.settings.invoiceAddress3 ?? ""}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceAddress3: e.target.value } })}
+                placeholder="NEW JERSEY 07073"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Tel No</Label>
+              <Input
+                value={db.settings.invoiceTel ?? ""}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceTel: e.target.value } })}
+                placeholder="+91 83472 78188"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Primary Phone</Label>
+              <Input
+                value={db.settings.invoicePrimary ?? ""}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoicePrimary: e.target.value } })}
+                placeholder="+1 201 554 4824"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Email</Label>
+              <Input
+                value={db.settings.invoiceEmail ?? ""}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceEmail: e.target.value } })}
+                placeholder="Starlinkjewels@gmail.com"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Invoice Terms</Label>
+              <Input
+                value={db.settings.invoiceTerms ?? "COD"}
+                onChange={e => setDb({ ...db, settings: { ...db.settings, invoiceTerms: e.target.value } })}
+                placeholder="COD"
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Image uploads */}
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Bill Images</p>
+          <div className="flex items-start justify-around gap-4 flex-wrap">
+            <ImgSlot
+              label="QR Code 1 (Venmo / Pay)"
+              icon={QrCode}
+              value={db.settings.invoiceQr1}
+              fieldKey="invoiceQr1"
+              inputRef={qr1Ref}
+            />
+            <ImgSlot
+              label="QR Code 2 (Venmo / Pay)"
+              icon={QrCode}
+              value={db.settings.invoiceQr2}
+              fieldKey="invoiceQr2"
+              inputRef={qr2Ref}
+            />
+            <ImgSlot
+              label="Company Stamp / Seal"
+              icon={Stamp}
+              value={db.settings.invoiceStamp}
+              fieldKey="invoiceStamp"
+              inputRef={stampRef}
+            />
+          </div>
+        </div>
+
+        <Button onClick={saveInvoice} className="btn-hero rounded-xl w-full">Save Invoice Settings</Button>
       </div>
 
       {/* Pricing Rates — admin & employee only */}
@@ -183,7 +371,7 @@ export function SettingsPage() {
           </label>
         </div>
         <Button variant="outline" onClick={clear} className="rounded-xl w-full text-destructive">
-          Clear Data & Reset Seed
+          Clear Data &amp; Reset Seed
         </Button>
       </div>
     </div>

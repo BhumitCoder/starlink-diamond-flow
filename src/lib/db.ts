@@ -163,6 +163,17 @@ export interface Settings {
   diamondRate: number;           // $ per carat
   metalRate: number;             // $ per gram
   defaultShippingCharge: number; // $ flat default per order
+  // Invoice branding
+  invoiceAddress1?: string;      // Street line
+  invoiceAddress2?: string;      // City / area
+  invoiceAddress3?: string;      // State + ZIP
+  invoiceTel?: string;           // Tel No
+  invoicePrimary?: string;       // Primary phone
+  invoiceEmail?: string;         // Email shown on bill
+  invoiceTerms?: string;         // e.g. "COD"
+  invoiceQr1?: string;           // base64 – first QR (Venmo / payment)
+  invoiceQr2?: string;           // base64 – second QR
+  invoiceStamp?: string;         // base64 – authorised stamp/seal
 }
 
 export interface DB {
@@ -181,7 +192,7 @@ export interface DB {
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0 }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0, invoiceAddress1: "55 JOHN ST", invoiceAddress2: "EAST RUTHERFORD", invoiceAddress3: "NEW JERSEY 07073", invoiceTel: "+91 83472 78188", invoicePrimary: "+1 201 554 4824", invoiceEmail: "Starlinkjewels@gmail.com", invoiceTerms: "COD" }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
