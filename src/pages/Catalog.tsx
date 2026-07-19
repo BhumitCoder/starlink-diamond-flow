@@ -349,6 +349,8 @@ export function CatalogPage() {
   const [folderPath, setFolderPath] = useState<string[]>([]);
   const currentFolderId = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
 
+  const [viewingFavorites, setViewingFavorites] = useState(false);
+
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [renamingId,    setRenamingId]    = useState<string | null>(null);
@@ -376,16 +378,28 @@ export function CatalogPage() {
   }, [reload]);
 
   /* ── Derived ── */
-  const subfolders   = folders.filter(f => (f.parentId ?? null) === currentFolderId);
-  const currentItems = currentFolderId ? items.filter(it => it.folderId === currentFolderId) : [];
-  const breadcrumb   = folderPath.map(id => folders.find(f => f.id === id)).filter(Boolean) as CatalogFolder[];
-  // Favorites: all items favourited by this user (that still exist)
+  const subfolders    = folders.filter(f => (f.parentId ?? null) === currentFolderId);
+  const currentItems  = currentFolderId ? items.filter(it => it.folderId === currentFolderId) : [];
+  const breadcrumb    = folderPath.map(id => folders.find(f => f.id === id)).filter(Boolean) as CatalogFolder[];
   const favoriteItems = items.filter(it => favIds.has(it.id));
-  const isRoot = folderPath.length === 0;
+  const isRoot        = folderPath.length === 0 && !viewingFavorites;
 
   /* ── Navigation ── */
-  function enterFolder(id: string) { setFolderPath(p => [...p, id]); setShowNewFolder(false); }
-  function navigateTo(idx: number)  { setFolderPath(p => idx < 0 ? [] : p.slice(0, idx + 1)); setShowNewFolder(false); }
+  function enterFolder(id: string) {
+    setFolderPath(p => [...p, id]);
+    setShowNewFolder(false);
+    setViewingFavorites(false);
+  }
+  function navigateTo(idx: number) {
+    setFolderPath(p => idx < 0 ? [] : p.slice(0, idx + 1));
+    setShowNewFolder(false);
+    setViewingFavorites(false);
+  }
+  function goToRoot() {
+    setFolderPath([]);
+    setShowNewFolder(false);
+    setViewingFavorites(false);
+  }
 
   /* ── Favorites ── */
   function toggleFavorite(itemId: string) {
@@ -481,14 +495,23 @@ export function CatalogPage() {
 
   /* ─────────────── Breadcrumb ─────────────── */
   function Breadcrumb() {
+    const atRoot = folderPath.length === 0 && !viewingFavorites;
     return (
       <nav className="flex items-center gap-1 flex-wrap text-sm min-w-0">
         <button
-          onClick={() => navigateTo(-1)}
-          className={`font-medium shrink-0 ${isRoot ? "text-brand-dark" : "text-primary active:underline"}`}
+          onClick={goToRoot}
+          className={`font-medium shrink-0 ${atRoot ? "text-brand-dark" : "text-primary active:underline"}`}
         >
           Catalog
         </button>
+        {viewingFavorites && folderPath.length === 0 && (
+          <span className="flex items-center gap-1 min-w-0">
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="font-medium text-brand-dark flex items-center gap-1">
+              <Heart className="h-3.5 w-3.5 fill-rose-500 text-rose-500" /> Favourites
+            </span>
+          </span>
+        )}
         {breadcrumb.map((f, i) => (
           <span key={f.id} className="flex items-center gap-1 min-w-0">
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -580,17 +603,75 @@ export function CatalogPage() {
     );
   }
 
-  /* ─────────────── Favorites section (root only) ─────────────── */
-  function FavoritesSection() {
-    if (!isRoot || favoriteItems.length === 0) return null;
+  /* ─────────────── Favorites virtual folder card ─────────────── */
+  function FavoritesFolderCard() {
+    if (favoriteItems.length === 0 || !isRoot) return null;
+    const thumbs = favoriteItems.filter(it => it.type === "image").slice(0, 4);
+    return (
+      <motion.div whileTap={{ scale: 0.97 }} className="relative">
+        <button
+          onClick={() => setViewingFavorites(true)}
+          className="w-full flex flex-col rounded-2xl border-2 border-rose-200 active:border-rose-400 bg-white shadow-sm overflow-hidden text-left"
+        >
+          {/* Mosaic thumbnail or solid colour */}
+          <div className="aspect-video w-full bg-gradient-to-br from-rose-50 to-rose-100 overflow-hidden relative">
+            {thumbs.length === 0 && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Heart className="h-12 w-12 text-rose-300 fill-rose-200" />
+              </div>
+            )}
+            {thumbs.length === 1 && (
+              <img src={thumbs[0].data} alt="" className="w-full h-full object-cover" />
+            )}
+            {thumbs.length >= 2 && (
+              <div className={`w-full h-full grid gap-0.5 ${thumbs.length >= 4 ? "grid-cols-2 grid-rows-2" : "grid-cols-2"}`}>
+                {thumbs.map(it => (
+                  <img key={it.id} src={it.data} alt="" className="w-full h-full object-cover" />
+                ))}
+              </div>
+            )}
+            {/* Heart badge */}
+            <div className="absolute top-2 left-2">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500 text-white shadow-sm">
+                <Heart className="h-2.5 w-2.5 fill-white" /> Favourites
+              </span>
+            </div>
+          </div>
+          {/* Label */}
+          <div className="px-3 pt-2.5 pb-1 flex items-center gap-2">
+            <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-400 shrink-0" />
+            <span className="text-sm font-semibold text-foreground truncate">Favourites</span>
+          </div>
+          <div className="px-3 pb-2.5 text-[11px] text-muted-foreground">
+            {favoriteItems.length} item{favoriteItems.length !== 1 ? "s" : ""}
+          </div>
+        </button>
+      </motion.div>
+    );
+  }
+
+  /* ─────────────── Favorites gallery view ─────────────── */
+  function FavoritesGallery() {
+    if (favoriteItems.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+          <div className="h-20 w-20 rounded-3xl bg-rose-50 grid place-items-center">
+            <Heart className="h-10 w-10 text-rose-200" />
+          </div>
+          <div>
+            <p className="font-semibold text-brand-dark">No favourites yet</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+              Tap the ♥ on any image or video to save it here.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-2 px-0.5">
-          <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Favorites · {favoriteItems.length}
-          </p>
-        </div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-0.5">
+          {favoriteItems.length} item{favoriteItems.length !== 1 ? "s" : ""}
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {favoriteItems.map((item, i) => {
             const folder = folders.find(f => f.id === item.folderId);
@@ -608,7 +689,6 @@ export function CatalogPage() {
             );
           })}
         </div>
-        <div className="h-px bg-border/50 mt-2" />
       </div>
     );
   }
@@ -701,9 +781,14 @@ export function CatalogPage() {
         <div className="min-w-0">
           <Breadcrumb />
           <p className="text-xs text-muted-foreground mt-1">
-            {subfolders.length} folder{subfolders.length !== 1 ? "s" : ""}
-            {currentFolderId && currentItems.length > 0 && ` · ${currentItems.length} file${currentItems.length !== 1 ? "s" : ""}`}
-            {isRoot && favoriteItems.length > 0 && ` · ${favoriteItems.length} favourite${favoriteItems.length !== 1 ? "s" : ""}`}
+            {viewingFavorites
+              ? `${favoriteItems.length} favourited item${favoriteItems.length !== 1 ? "s" : ""}`
+              : [
+                  subfolders.length > 0 && `${subfolders.length} folder${subfolders.length !== 1 ? "s" : ""}`,
+                  currentItems.length > 0 && `${currentItems.length} file${currentItems.length !== 1 ? "s" : ""}`,
+                  isRoot && favoriteItems.length > 0 && `${favoriteItems.length} favourite${favoriteItems.length !== 1 ? "s" : ""}`,
+                ].filter(Boolean).join(" · ") || "Empty"
+            }
           </p>
         </div>
         {canEdit && (
@@ -779,49 +864,121 @@ export function CatalogPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Favorites (root only) ── */}
-      <FavoritesSection />
+      {/* ── Favourites folder view ── */}
+      {viewingFavorites && <FavoritesGallery />}
 
-      {/* ── Folder grid ── */}
-      <FolderGrid />
-
-      {/* ── Empty states ── */}
-      {isRoot && subfolders.length === 0 && favoriteItems.length === 0 && !showNewFolder && (
-        <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
-          <div className="h-20 w-20 rounded-3xl bg-primary/10 grid place-items-center">
-            <FolderOpen className="h-10 w-10 text-primary/40" />
-          </div>
-          <div>
-            <p className="font-semibold text-brand-dark">No folders yet</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-              {canEdit ? "Create a folder to start organising your product catalog." : "No catalog folders have been created yet."}
-            </p>
-          </div>
-          {canEdit && (
-            <button onClick={() => setShowNewFolder(true)}
-              className="flex items-center gap-2 px-5 h-11 rounded-xl btn-hero text-sm font-medium">
-              <Plus className="h-4 w-4" /> New Folder
-            </button>
+      {/* ── Normal folder/gallery view ── */}
+      {!viewingFavorites && (
+        <>
+          {/* Root: Favourites virtual card + real folders in one grid */}
+          {isRoot && (subfolders.length > 0 || favoriteItems.length > 0) && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+              <FavoritesFolderCard />
+              {subfolders.map(folder => {
+                const count      = totalItemCount(folder.id);
+                const thumb      = items.find(it => [folder.id, ...descendantIds(folder.id)].includes(it.folderId) && it.type === "image");
+                const isRenaming = renamingId === folder.id;
+                return (
+                  <motion.div key={folder.id} whileTap={{ scale: 0.97 }} className="relative">
+                    <button
+                      onClick={() => { if (!isRenaming) enterFolder(folder.id); }}
+                      className="w-full flex flex-col rounded-2xl border border-border/60 active:border-primary/40 bg-white shadow-sm overflow-hidden text-left"
+                    >
+                      <div className="aspect-video w-full bg-gradient-to-br from-amber-50 to-amber-100 overflow-hidden relative">
+                        {thumb
+                          ? <img src={thumb.data} alt="" className="w-full h-full object-cover" />
+                          : <div className="absolute inset-0 flex items-center justify-center"><Folder className="h-10 w-10 text-amber-400" /></div>}
+                      </div>
+                      <div className="px-3 pt-2.5 pb-1 flex items-center gap-2">
+                        <Folder className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                        {isRenaming ? (
+                          <input autoFocus
+                            className="flex-1 text-sm font-medium bg-transparent outline-none border-b border-primary min-w-0"
+                            value={renameVal}
+                            onChange={e => setRenameVal(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            onKeyDown={e => {
+                              if (e.key === "Enter")  { e.stopPropagation(); renameFolder(folder.id); }
+                              if (e.key === "Escape") { e.stopPropagation(); setRenamingId(null); }
+                            }}
+                          />
+                        ) : (
+                          <span className="text-sm font-medium text-foreground truncate">{folder.name}</span>
+                        )}
+                      </div>
+                      <div className="px-3 pb-2.5 text-[11px] text-muted-foreground">
+                        {count} item{count !== 1 ? "s" : ""}
+                      </div>
+                    </button>
+                    {canEdit && !isRenaming && (
+                      <div className="absolute top-2 right-2">
+                        <FolderMenu
+                          onRename={() => { setRenamingId(folder.id); setRenameVal(folder.name); }}
+                          onDelete={() => setDeleteConfirm(folder.id)}
+                        />
+                      </div>
+                    )}
+                    {isRenaming && (
+                      <div className="absolute top-2 right-2 flex gap-1">
+                        <button onClick={e => { e.stopPropagation(); renameFolder(folder.id); }}
+                          className="h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm">
+                          <Check className="h-4 w-4" />
+                        </button>
+                        <button onClick={e => { e.stopPropagation(); setRenamingId(null); }}
+                          className="h-8 w-8 rounded-xl bg-secondary grid place-items-center shadow-sm">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
-        </div>
-      )}
 
-      {!isRoot && subfolders.length === 0 && currentItems.length === 0 && !showNewFolder && (
-        <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 grid place-items-center">
-            <ImageIcon className="h-8 w-8 text-primary/40" />
-          </div>
-          <div>
-            <p className="font-semibold text-brand-dark">This folder is empty</p>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              {canEdit ? "Create a subfolder or upload files below." : "No items here yet."}
-            </p>
-          </div>
-        </div>
-      )}
+          {/* Sub-level: subfolders grid (separate from items) */}
+          {!isRoot && <FolderGrid />}
 
-      {/* ── Item gallery + upload zone ── */}
-      <ItemGallery />
+          {/* Root empty state */}
+          {isRoot && subfolders.length === 0 && favoriteItems.length === 0 && !showNewFolder && (
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
+              <div className="h-20 w-20 rounded-3xl bg-primary/10 grid place-items-center">
+                <FolderOpen className="h-10 w-10 text-primary/40" />
+              </div>
+              <div>
+                <p className="font-semibold text-brand-dark">No folders yet</p>
+                <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                  {canEdit ? "Create a folder to start organising your product catalog." : "No catalog folders have been created yet."}
+                </p>
+              </div>
+              {canEdit && (
+                <button onClick={() => setShowNewFolder(true)}
+                  className="flex items-center gap-2 px-5 h-11 rounded-xl btn-hero text-sm font-medium">
+                  <Plus className="h-4 w-4" /> New Folder
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Sub-folder empty state */}
+          {!isRoot && subfolders.length === 0 && currentItems.length === 0 && !showNewFolder && (
+            <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
+              <div className="h-16 w-16 rounded-2xl bg-primary/10 grid place-items-center">
+                <ImageIcon className="h-8 w-8 text-primary/40" />
+              </div>
+              <div>
+                <p className="font-semibold text-brand-dark">This folder is empty</p>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {canEdit ? "Create a subfolder or upload files below." : "No items here yet."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Item gallery */}
+          <ItemGallery />
+        </>
+      )}
 
       {/* ── Modals ── */}
       <DeleteModal />
