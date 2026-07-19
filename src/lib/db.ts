@@ -155,6 +155,25 @@ export interface Expense {
   createdAt: string;
 }
 
+export interface CatalogFolder {
+  id: string;
+  name: string;
+  createdBy: string; // userId
+  createdAt: string;
+}
+
+export type CatalogItemType = "image" | "video";
+
+export interface CatalogItem {
+  id: string;
+  folderId: string;
+  name: string;
+  type: CatalogItemType;
+  data: string; // base64 data URL
+  createdBy: string; // userId
+  createdAt: string;
+}
+
 export interface Settings {
   companyName: string;
   currency: string;
@@ -186,13 +205,15 @@ export interface DB {
   invoices: Invoice[];
   expenses: Expense[];
   settings: Settings;
+  catalogFolders: CatalogFolder[];
+  catalogItems: CatalogItem[];
   session: { userId: string | null };
 }
 
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0, invoiceAddress1: "55 JOHN ST", invoiceAddress2: "EAST RUTHERFORD", invoiceAddress3: "NEW JERSEY 07073", invoiceTel: "+91 83472 78188", invoicePrimary: "+1 201 554 4824", invoiceEmail: "Starlinkjewels@gmail.com", invoiceTerms: "COD" }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], catalogFolders: [], catalogItems: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0, invoiceAddress1: "55 JOHN ST", invoiceAddress2: "EAST RUTHERFORD", invoiceAddress3: "NEW JERSEY 07073", invoiceTel: "+91 83472 78188", invoicePrimary: "+1 201 554 4824", invoiceEmail: "Starlinkjewels@gmail.com", invoiceTerms: "COD" }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -214,6 +235,8 @@ export function loadDb(): DB {
     if (db.settings.diamondRate == null) db.settings.diamondRate = 3500;
     if (db.settings.metalRate == null) db.settings.metalRate = 65;
     if (db.settings.defaultShippingCharge == null) db.settings.defaultShippingCharge = 0;
+    if (!db.catalogFolders) db.catalogFolders = [];
+    if (!db.catalogItems) db.catalogItems = [];
     return db;
   } catch { return emptyDb(); }
 }

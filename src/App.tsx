@@ -19,6 +19,7 @@ import { InvoicesPage } from "./pages/Invoices";
 import { SearchPage } from "./pages/Search";
 import { ExpensesPage } from "./pages/Expenses";
 import { IncomePage } from "./pages/Income";
+import { CatalogPage } from "./pages/Catalog";
 import { InstallPrompt } from "./components/InstallPrompt";
 import type { Role } from "./lib/db";
 
@@ -52,6 +53,7 @@ export function App() {
           <Route path="settings" element={<Protected roles={["admin","employee"]}><SettingsPage /></Protected>} />
           <Route path="expenses" element={<Protected roles={["admin","employee"]}><ExpensesPage /></Protected>} />
           <Route path="income" element={<IncomePage />} />
+          <Route path="catalog" element={<CatalogPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
