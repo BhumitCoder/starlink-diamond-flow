@@ -196,6 +196,11 @@ export interface Settings {
   invoiceStamp?: string;         // base64 – authorised stamp/seal
 }
 
+export interface CatalogFavorite {
+  userId: string;
+  itemId: string;
+}
+
 export interface DB {
   users: User[];
   clients: Client[];
@@ -208,13 +213,14 @@ export interface DB {
   settings: Settings;
   catalogFolders: CatalogFolder[];
   catalogItems: CatalogItem[];
+  catalogFavorites: CatalogFavorite[];
   session: { userId: string | null };
 }
 
 const KEY = "starlink_db_v2";
 
 function emptyDb(): DB {
-  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], catalogFolders: [], catalogItems: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0, invoiceAddress1: "55 JOHN ST", invoiceAddress2: "EAST RUTHERFORD", invoiceAddress3: "NEW JERSEY 07073", invoiceTel: "+91 83472 78188", invoicePrimary: "+1 201 554 4824", invoiceEmail: "Starlinkjewels@gmail.com", invoiceTerms: "COD" }, session: { userId: null } };
+  return { users: [], clients: [], orders: [], tasks: [], messages: [], notifications: [], invoices: [], expenses: [], catalogFolders: [], catalogItems: [], catalogFavorites: [], settings: { companyName: "Starlink Jewels", currency: "USD", language: "English", notifications: true, diamondRate: 3500, metalRate: 65, defaultShippingCharge: 0, invoiceAddress1: "55 JOHN ST", invoiceAddress2: "EAST RUTHERFORD", invoiceAddress3: "NEW JERSEY 07073", invoiceTel: "+91 83472 78188", invoicePrimary: "+1 201 554 4824", invoiceEmail: "Starlinkjewels@gmail.com", invoiceTerms: "COD" }, session: { userId: null } };
 }
 
 export function loadDb(): DB {
@@ -238,6 +244,7 @@ export function loadDb(): DB {
     if (db.settings.defaultShippingCharge == null) db.settings.defaultShippingCharge = 0;
     if (!db.catalogFolders) db.catalogFolders = [];
     if (!db.catalogItems) db.catalogItems = [];
+    if (!db.catalogFavorites) db.catalogFavorites = [];
     return db;
   } catch { return emptyDb(); }
 }

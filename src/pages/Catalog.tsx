@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderOpen, Folder, Plus, Trash2, Upload, X, Play,
   ChevronRight, Edit2, Check, AlertCircle, Image as ImageIcon,
-  Video, Download, MoreVertical, ChevronLeft,
+  Video, Download, MoreVertical, ChevronLeft, Heart,
 } from "lucide-react";
 import { loadDb, updateDb, uid } from "@/lib/db";
 import type { CatalogFolder, CatalogItem } from "@/lib/db";
@@ -44,6 +44,24 @@ function readAsBase64(file: File): Promise<string> {
 }
 
 /* ─────────────────────────────────────────────────────────────── */
+/*  Heart button — shared by item cards & favorites section       */
+/* ─────────────────────────────────────────────────────────────── */
+function HeartBtn({ active, onToggle }: { active: boolean; onToggle(e: React.MouseEvent): void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className={`h-8 w-8 rounded-lg border grid place-items-center shadow-sm transition-colors
+        ${active
+          ? "bg-rose-50 border-rose-200 text-rose-500"
+          : "bg-white/90 border-border/60 text-muted-foreground hover:text-rose-400 active:text-rose-500"}`}
+      title={active ? "Remove from favorites" : "Add to favorites"}
+    >
+      <Heart className={`h-3.5 w-3.5 ${active ? "fill-rose-500" : ""}`} />
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 /*  Lightbox  (with prev / next)                                   */
 /* ─────────────────────────────────────────────────────────────── */
 function Lightbox({
@@ -54,9 +72,9 @@ function Lightbox({
   onClose: () => void;
 }) {
   const [idx, setIdx] = useState(startIndex);
-  const [dir, setDir] = useState(0); // -1 prev, 1 next
+  const [dir, setDir] = useState(0);
 
-  const item = items[idx];
+  const item    = items[idx];
   const hasPrev = idx > 0;
   const hasNext = idx < items.length - 1;
 
@@ -88,22 +106,15 @@ function Lightbox({
       <div className="flex items-center justify-between px-4 py-3 shrink-0 gap-3">
         <p className="text-white/80 text-sm font-medium truncate">
           {item.name}
-          {items.length > 1 && (
-            <span className="ml-2 text-white/40 text-xs">{idx + 1} / {items.length}</span>
-          )}
+          {items.length > 1 && <span className="ml-2 text-white/40 text-xs">{idx + 1} / {items.length}</span>}
         </p>
         <div className="flex items-center gap-2 shrink-0">
-          <a
-            href={item.data}
-            download={item.name}
-            className="h-10 w-10 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white"
-          >
+          <a href={item.data} download={item.name}
+            className="h-10 w-10 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white">
             <Download className="h-5 w-5" />
           </a>
-          <button
-            onClick={onClose}
-            className="h-10 w-10 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white"
-          >
+          <button onClick={onClose}
+            className="h-10 w-10 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -111,17 +122,12 @@ function Lightbox({
 
       {/* Media + side arrows */}
       <div className="flex-1 flex items-center min-h-0 relative">
-        {/* Prev arrow */}
         {hasPrev && (
-          <button
-            onClick={prev}
-            className="absolute left-2 z-10 h-11 w-11 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white shrink-0"
-          >
+          <button onClick={prev}
+            className="absolute left-2 z-10 h-11 w-11 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white">
             <ChevronLeft className="h-6 w-6" />
           </button>
         )}
-
-        {/* Media */}
         <AnimatePresence mode="wait" custom={dir}>
           <motion.div
             key={item.id}
@@ -133,54 +139,41 @@ function Lightbox({
             className="flex-1 flex items-center justify-center px-14 h-full min-h-0"
           >
             {item.type === "image" ? (
-              <img
-                src={item.data}
-                alt={item.name}
+              <img src={item.data} alt={item.name}
                 className="max-w-full max-h-full object-contain rounded-xl select-none"
                 style={{ maxHeight: "calc(100vh - 140px)" }}
                 onClick={onClose}
               />
             ) : (
-              <video
-                src={item.data}
-                controls
-                autoPlay
-                playsInline
+              <video src={item.data} controls autoPlay playsInline
                 className="max-w-full rounded-xl"
                 style={{ maxHeight: "calc(100vh - 140px)" }}
               />
             )}
           </motion.div>
         </AnimatePresence>
-
-        {/* Next arrow */}
         {hasNext && (
-          <button
-            onClick={next}
-            className="absolute right-2 z-10 h-11 w-11 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white shrink-0"
-          >
+          <button onClick={next}
+            className="absolute right-2 z-10 h-11 w-11 rounded-full bg-white/10 active:bg-white/20 flex items-center justify-center text-white">
             <ChevronRight className="h-6 w-6" />
           </button>
         )}
       </div>
 
-      {/* Thumbnail strip (when > 1 item) */}
+      {/* Thumbnail strip */}
       {items.length > 1 && (
         <div className="shrink-0 px-4 pb-3 pt-2 flex items-center gap-2 overflow-x-auto">
           {items.map((it, i) => (
-            <button
-              key={it.id}
+            <button key={it.id}
               onClick={() => { setDir(i > idx ? 1 : -1); setIdx(i); }}
               className={`shrink-0 h-12 w-12 rounded-lg overflow-hidden border-2 transition-all
-                ${i === idx ? "border-white scale-110" : "border-white/20 opacity-50"}`}
-            >
-              {it.type === "image" ? (
-                <img src={it.data} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-slate-700 flex items-center justify-center">
-                  <Play className="h-4 w-4 text-white" />
-                </div>
-              )}
+                ${i === idx ? "border-white scale-110" : "border-white/20 opacity-50"}`}>
+              {it.type === "image"
+                ? <img src={it.data} alt="" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-slate-700 flex items-center justify-center">
+                    <Play className="h-4 w-4 text-white" />
+                  </div>
+              }
             </button>
           ))}
         </div>
@@ -190,7 +183,7 @@ function Lightbox({
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/*  Folder action menu  (3-dot, always visible)                   */
+/*  Folder action menu                                             */
 /* ─────────────────────────────────────────────────────────────── */
 function FolderMenu({ onRename, onDelete }: { onRename(): void; onDelete(): void }) {
   const [open, setOpen] = useState(false);
@@ -207,10 +200,8 @@ function FolderMenu({ onRename, onDelete }: { onRename(): void; onDelete(): void
 
   return (
     <div className="relative" ref={ref} onClick={e => e.stopPropagation()}>
-      <button
-        onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
-        className="h-8 w-8 rounded-xl bg-white/90 border border-border/60 grid place-items-center shadow-sm text-muted-foreground hover:text-foreground active:bg-secondary transition-colors"
-      >
+      <button onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
+        className="h-8 w-8 rounded-xl bg-white/90 border border-border/60 grid place-items-center shadow-sm text-muted-foreground hover:text-foreground active:bg-secondary transition-colors">
         <MoreVertical className="h-4 w-4" />
       </button>
       <AnimatePresence>
@@ -222,16 +213,12 @@ function FolderMenu({ onRename, onDelete }: { onRename(): void; onDelete(): void
             transition={{ duration: 0.12 }}
             className="absolute right-0 top-9 z-30 w-36 bg-white rounded-xl border border-border/60 shadow-lg overflow-hidden"
           >
-            <button
-              onClick={() => { setOpen(false); onRename(); }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-secondary active:bg-secondary"
-            >
+            <button onClick={() => { setOpen(false); onRename(); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-secondary active:bg-secondary">
               <Edit2 className="h-3.5 w-3.5 text-muted-foreground" /> Rename
             </button>
-            <button
-              onClick={() => { setOpen(false); onDelete(); }}
-              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 active:bg-destructive/10"
-            >
+            <button onClick={() => { setOpen(false); onDelete(); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/10 active:bg-destructive/10">
               <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
           </motion.div>
@@ -242,15 +229,14 @@ function FolderMenu({ onRename, onDelete }: { onRename(): void; onDelete(): void
 }
 
 /* ─────────────────────────────────────────────────────────────── */
-/*  Drop / tap upload zone                                         */
+/*  Upload zone                                                    */
 /* ─────────────────────────────────────────────────────────────── */
 function UploadZone({ onFiles, uploading }: { onFiles(f: FileList): void; uploading?: boolean }) {
   const [dragging, setDragging] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
 
   const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(false);
+    e.preventDefault(); setDragging(false);
     if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
   };
 
@@ -267,8 +253,7 @@ function UploadZone({ onFiles, uploading }: { onFiles(f: FileList): void; upload
       <div className={`h-14 w-14 rounded-2xl grid place-items-center transition-colors ${dragging ? "bg-primary/10" : "bg-secondary"}`}>
         {uploading
           ? <span className="h-7 w-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-          : <Upload className={`h-7 w-7 ${dragging ? "text-primary" : "text-muted-foreground"}`} />
-        }
+          : <Upload className={`h-7 w-7 ${dragging ? "text-primary" : "text-muted-foreground"}`} />}
       </div>
       <div className="text-center">
         <p className="text-sm font-semibold text-foreground">
@@ -283,16 +268,75 @@ function UploadZone({ onFiles, uploading }: { onFiles(f: FileList): void; upload
 }
 
 /* ─────────────────────────────────────────────────────────────── */
+/*  Reusable item card                                             */
+/* ─────────────────────────────────────────────────────────────── */
+function ItemCard({
+  item, isFav, canEdit, onOpen, onToggleFav, onDelete,
+}: {
+  item: CatalogItem;
+  isFav: boolean;
+  canEdit: boolean;
+  onOpen(): void;
+  onToggleFav(): void;
+  onDelete?(): void;
+}) {
+  return (
+    <motion.div whileTap={{ scale: 0.97 }}
+      className="relative rounded-2xl overflow-hidden border border-border/60 bg-white shadow-sm flex flex-col">
+      {/* Thumbnail */}
+      <button onClick={onOpen} className="block w-full aspect-square bg-secondary/30 overflow-hidden relative">
+        {item.type === "image"
+          ? <img src={item.data} alt={item.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
+              <Video className="h-10 w-10 text-slate-400" />
+            </div>
+        }
+        {item.type === "video" && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-full bg-black/40 flex items-center justify-center">
+              <Play className="h-6 w-6 text-white ml-0.5" />
+            </div>
+          </div>
+        )}
+        {/* Type badge */}
+        <div className="absolute top-2 left-2">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-black/50 text-white backdrop-blur-sm">
+            {item.type === "video" ? <Video className="h-2.5 w-2.5" /> : <ImageIcon className="h-2.5 w-2.5" />}
+            {item.type}
+          </span>
+        </div>
+        {/* Delete (admin/employee) */}
+        {canEdit && onDelete && (
+          <button onClick={e => { e.stopPropagation(); onDelete(); }}
+            className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-white/90 border border-border/60 grid place-items-center text-muted-foreground hover:text-destructive active:text-destructive shadow-sm">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </button>
+
+      {/* Bottom row: name + heart */}
+      <div className="flex items-center gap-1 px-2.5 py-2">
+        <p className="flex-1 text-[11px] text-foreground font-medium truncate min-w-0" title={item.name}>
+          {item.name}
+        </p>
+        <HeartBtn active={isFav} onToggle={e => { e.stopPropagation(); onToggleFav(); }} />
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────── */
 /*  Main page                                                      */
 /* ─────────────────────────────────────────────────────────────── */
 export function CatalogPage() {
   const { user } = useAuth();
   const canEdit = user?.role === "admin" || user?.role === "employee";
 
-  const [folders, setFolders] = useState<CatalogFolder[]>([]);
-  const [items,   setItems]   = useState<CatalogItem[]>([]);
+  const [folders,   setFolders]   = useState<CatalogFolder[]>([]);
+  const [items,     setItems]     = useState<CatalogItem[]>([]);
+  const [favIds,    setFavIds]    = useState<Set<string>>(new Set());
 
-  // Navigation: stack of folder IDs (empty = root)
+  // Navigation stack (empty = root)
   const [folderPath, setFolderPath] = useState<string[]>([]);
   const currentFolderId = folderPath.length > 0 ? folderPath[folderPath.length - 1] : null;
 
@@ -310,7 +354,11 @@ export function CatalogPage() {
     const db = loadDb();
     setFolders(db.catalogFolders ?? []);
     setItems(db.catalogItems ?? []);
-  }, []);
+    const myFavs = (db.catalogFavorites ?? [])
+      .filter(f => f.userId === user!.id)
+      .map(f => f.itemId);
+    setFavIds(new Set(myFavs));
+  }, [user]);
 
   useEffect(() => {
     reload();
@@ -319,16 +367,27 @@ export function CatalogPage() {
   }, [reload]);
 
   /* ── Derived ── */
-  // Subfolders of the current level
-  const subfolders = folders.filter(f => (f.parentId ?? null) === currentFolderId);
-  // Items in the current folder (only when inside a folder, not at root)
+  const subfolders   = folders.filter(f => (f.parentId ?? null) === currentFolderId);
   const currentItems = currentFolderId ? items.filter(it => it.folderId === currentFolderId) : [];
-  // Breadcrumb: resolve path IDs → folder objects
-  const breadcrumb = folderPath.map(id => folders.find(f => f.id === id)).filter(Boolean) as CatalogFolder[];
+  const breadcrumb   = folderPath.map(id => folders.find(f => f.id === id)).filter(Boolean) as CatalogFolder[];
+  // Favorites: all items favourited by this user (that still exist)
+  const favoriteItems = items.filter(it => favIds.has(it.id));
+  const isRoot = folderPath.length === 0;
 
   /* ── Navigation ── */
   function enterFolder(id: string) { setFolderPath(p => [...p, id]); setShowNewFolder(false); }
   function navigateTo(idx: number)  { setFolderPath(p => idx < 0 ? [] : p.slice(0, idx + 1)); setShowNewFolder(false); }
+
+  /* ── Favorites ── */
+  function toggleFavorite(itemId: string) {
+    updateDb(db => {
+      if (!db.catalogFavorites) db.catalogFavorites = [];
+      const idx = db.catalogFavorites.findIndex(f => f.userId === user!.id && f.itemId === itemId);
+      if (idx >= 0) db.catalogFavorites.splice(idx, 1);
+      else          db.catalogFavorites.push({ userId: user!.id, itemId });
+    });
+    reload();
+  }
 
   /* ── Folder CRUD ── */
   function createFolder() {
@@ -342,8 +401,7 @@ export function CatalogPage() {
         createdAt: new Date().toISOString(),
       });
     });
-    setNewFolderName("");
-    setShowNewFolder(false);
+    setNewFolderName(""); setShowNewFolder(false);
   }
 
   function renameFolder(id: string) {
@@ -353,7 +411,6 @@ export function CatalogPage() {
     setRenamingId(null);
   }
 
-  // Recursively collect all descendant folder IDs
   function descendantIds(id: string): string[] {
     const children = folders.filter(f => f.parentId === id).map(f => f.id);
     return [...children, ...children.flatMap(descendantIds)];
@@ -362,29 +419,31 @@ export function CatalogPage() {
   function deleteFolder(id: string) {
     const ids = [id, ...descendantIds(id)];
     updateDb(db => {
-      db.catalogFolders = db.catalogFolders.filter(f => !ids.includes(f.id));
-      db.catalogItems   = db.catalogItems.filter(it => !ids.includes(it.folderId));
+      db.catalogFolders   = db.catalogFolders.filter(f => !ids.includes(f.id));
+      db.catalogItems     = db.catalogItems.filter(it => !ids.includes(it.folderId));
+      db.catalogFavorites = db.catalogFavorites.filter(f => {
+        const item = db.catalogItems.find(it => it.id === f.itemId);
+        return item && !ids.includes(item.folderId);
+      });
     });
     setDeleteConfirm(null);
-    // Pop back if we deleted a folder in our path
     setFolderPath(p => {
-      const cutIdx = p.findIndex(x => ids.includes(x));
-      return cutIdx < 0 ? p : p.slice(0, cutIdx);
+      const cut = p.findIndex(x => ids.includes(x));
+      return cut < 0 ? p : p.slice(0, cut);
     });
   }
 
   /* ── Upload ── */
   async function handleFiles(files: FileList) {
     if (!currentFolderId) return;
-    setUploading(true);
-    setError(null);
+    setUploading(true); setError(null);
     try {
       for (const file of Array.from(files)) {
         const mb = file.size / 1024 / 1024;
         if (mb > MAX_FILE_MB) { setError(`"${file.name}" exceeds ${MAX_FILE_MB} MB — skipped.`); continue; }
         const isImage = file.type.startsWith("image/");
         const isVideo = file.type.startsWith("video/");
-        if (!isImage && !isVideo) { setError(`"${file.name}" is not a supported file — skipped.`); continue; }
+        if (!isImage && !isVideo) { setError(`"${file.name}" not supported — skipped.`); continue; }
         const data = isImage ? await compressImage(file) : await readAsBase64(file);
         updateDb(db => {
           db.catalogItems.push({
@@ -399,23 +458,25 @@ export function CatalogPage() {
   }
 
   function deleteItem(id: string) {
-    updateDb(db => { db.catalogItems = db.catalogItems.filter(it => it.id !== id); });
+    updateDb(db => {
+      db.catalogItems     = db.catalogItems.filter(it => it.id !== id);
+      db.catalogFavorites = db.catalogFavorites.filter(f => f.itemId !== id);
+    });
     setDeleteConfirm(null);
   }
 
-  /* ── Counts including all descendants (for folder cards at root) ── */
   function totalItemCount(folderId: string): number {
     const ids = [folderId, ...descendantIds(folderId)];
     return items.filter(it => ids.includes(it.folderId)).length;
   }
 
-  /* ─────────────────────── Breadcrumb ──────────────────────── */
+  /* ─────────────── Breadcrumb ─────────────── */
   function Breadcrumb() {
     return (
       <nav className="flex items-center gap-1 flex-wrap text-sm min-w-0">
         <button
           onClick={() => navigateTo(-1)}
-          className={`font-medium transition-colors shrink-0 ${folderPath.length === 0 ? "text-brand-dark" : "text-primary active:underline"}`}
+          className={`font-medium shrink-0 ${isRoot ? "text-brand-dark" : "text-primary active:underline"}`}
         >
           Catalog
         </button>
@@ -424,7 +485,7 @@ export function CatalogPage() {
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <button
               onClick={() => navigateTo(i)}
-              className={`font-medium truncate transition-colors max-w-[120px] sm:max-w-[180px]
+              className={`font-medium truncate max-w-[120px] sm:max-w-[200px]
                 ${i === breadcrumb.length - 1 ? "text-brand-dark" : "text-primary active:underline"}`}
             >
               {f.name}
@@ -435,95 +496,113 @@ export function CatalogPage() {
     );
   }
 
-  /* ─────────────────────── Folder cards ────────────────────── */
+  /* ─────────────── Folder grid ─────────────── */
   function FolderGrid() {
+    if (subfolders.length === 0) return null;
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-        {subfolders.map(folder => {
-          const count = totalItemCount(folder.id);
-          const thumb = items.find(it => {
-            const ids = [folder.id, ...descendantIds(folder.id)];
-            return ids.includes(it.folderId) && it.type === "image";
-          });
-          const isRenaming = renamingId === folder.id;
-
-          return (
-            <motion.div key={folder.id} whileTap={{ scale: 0.97 }} className="relative">
-              <button
-                onClick={() => { if (!isRenaming) enterFolder(folder.id); }}
-                className="w-full flex flex-col rounded-2xl border border-border/60 active:border-primary/40 bg-white shadow-sm overflow-hidden text-left"
-              >
-                {/* Thumbnail */}
-                <div className="aspect-video w-full bg-gradient-to-br from-amber-50 to-amber-100 overflow-hidden relative">
-                  {thumb ? (
-                    <img src={thumb.data} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Folder className="h-10 w-10 text-amber-400" />
-                    </div>
-                  )}
-                </div>
-                {/* Label */}
-                <div className="px-3 pt-2.5 pb-1 flex items-center gap-2">
-                  <Folder className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                  {isRenaming ? (
-                    <input
-                      autoFocus
-                      className="flex-1 text-sm font-medium bg-transparent outline-none border-b border-primary min-w-0"
-                      value={renameVal}
-                      onChange={e => setRenameVal(e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      onKeyDown={e => {
-                        if (e.key === "Enter")  { e.stopPropagation(); renameFolder(folder.id); }
-                        if (e.key === "Escape") { e.stopPropagation(); setRenamingId(null); }
-                      }}
+      <div className="space-y-3">
+        {!isRoot && (
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-0.5">
+            Folders · {subfolders.length}
+          </p>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          {subfolders.map(folder => {
+            const count      = totalItemCount(folder.id);
+            const thumb      = items.find(it => [folder.id, ...descendantIds(folder.id)].includes(it.folderId) && it.type === "image");
+            const isRenaming = renamingId === folder.id;
+            return (
+              <motion.div key={folder.id} whileTap={{ scale: 0.97 }} className="relative">
+                <button
+                  onClick={() => { if (!isRenaming) enterFolder(folder.id); }}
+                  className="w-full flex flex-col rounded-2xl border border-border/60 active:border-primary/40 bg-white shadow-sm overflow-hidden text-left"
+                >
+                  <div className="aspect-video w-full bg-gradient-to-br from-amber-50 to-amber-100 overflow-hidden relative">
+                    {thumb
+                      ? <img src={thumb.data} alt="" className="w-full h-full object-cover" />
+                      : <div className="absolute inset-0 flex items-center justify-center"><Folder className="h-10 w-10 text-amber-400" /></div>}
+                  </div>
+                  <div className="px-3 pt-2.5 pb-1 flex items-center gap-2">
+                    <Folder className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    {isRenaming ? (
+                      <input autoFocus
+                        className="flex-1 text-sm font-medium bg-transparent outline-none border-b border-primary min-w-0"
+                        value={renameVal}
+                        onChange={e => setRenameVal(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === "Enter")  { e.stopPropagation(); renameFolder(folder.id); }
+                          if (e.key === "Escape") { e.stopPropagation(); setRenamingId(null); }
+                        }}
+                      />
+                    ) : (
+                      <span className="text-sm font-medium text-foreground truncate">{folder.name}</span>
+                    )}
+                  </div>
+                  <div className="px-3 pb-2.5 text-[11px] text-muted-foreground">
+                    {count} item{count !== 1 ? "s" : ""}
+                  </div>
+                </button>
+                {canEdit && !isRenaming && (
+                  <div className="absolute top-2 right-2">
+                    <FolderMenu
+                      onRename={() => { setRenamingId(folder.id); setRenameVal(folder.name); }}
+                      onDelete={() => setDeleteConfirm(folder.id)}
                     />
-                  ) : (
-                    <span className="text-sm font-medium text-foreground truncate">{folder.name}</span>
-                  )}
-                </div>
-                <div className="px-3 pb-2.5 text-[11px] text-muted-foreground">
-                  {count} item{count !== 1 ? "s" : ""}
-                </div>
-              </button>
-
-              {/* 3-dot menu */}
-              {canEdit && !isRenaming && (
-                <div className="absolute top-2 right-2">
-                  <FolderMenu
-                    onRename={() => { setRenamingId(folder.id); setRenameVal(folder.name); }}
-                    onDelete={() => setDeleteConfirm(folder.id)}
-                  />
-                </div>
-              )}
-              {/* Confirm rename */}
-              {isRenaming && (
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <button
-                    onClick={e => { e.stopPropagation(); renameFolder(folder.id); }}
-                    className="h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={e => { e.stopPropagation(); setRenamingId(null); }}
-                    className="h-8 w-8 rounded-xl bg-secondary grid place-items-center shadow-sm"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          );
-        })}
+                  </div>
+                )}
+                {isRenaming && (
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    <button onClick={e => { e.stopPropagation(); renameFolder(folder.id); }}
+                      className="h-8 w-8 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-sm">
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button onClick={e => { e.stopPropagation(); setRenamingId(null); }}
+                      className="h-8 w-8 rounded-xl bg-secondary grid place-items-center shadow-sm">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
-  /* ─────────────────────── Item gallery ────────────────────── */
+  /* ─────────────── Favorites section (root only) ─────────────── */
+  function FavoritesSection() {
+    if (!isRoot || favoriteItems.length === 0) return null;
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 px-0.5">
+          <Heart className="h-4 w-4 fill-rose-500 text-rose-500" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Favorites · {favoriteItems.length}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          {favoriteItems.map((item, i) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              isFav={true}
+              canEdit={canEdit}
+              onOpen={() => setLightbox({ items: favoriteItems, idx: i })}
+              onToggleFav={() => toggleFavorite(item.id)}
+              onDelete={canEdit ? () => setDeleteConfirm(item.id) : undefined}
+            />
+          ))}
+        </div>
+        <div className="h-px bg-border/50 mt-2" />
+      </div>
+    );
+  }
+
+  /* ─────────────── Item gallery (inside a folder) ─────────────── */
   function ItemGallery() {
     if (currentItems.length === 0 && !canEdit) return null;
-
     return (
       <div className="space-y-3">
         {currentItems.length > 0 && (
@@ -533,64 +612,25 @@ export function CatalogPage() {
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {currentItems.map((item, i) => (
-                <motion.div
+                <ItemCard
                   key={item.id}
-                  whileTap={{ scale: 0.97 }}
-                  className="relative rounded-2xl overflow-hidden border border-border/60 bg-white shadow-sm"
-                >
-                  <button
-                    onClick={() => setLightbox({ items: currentItems, idx: i })}
-                    className="block w-full aspect-square bg-secondary/30 overflow-hidden relative"
-                  >
-                    {item.type === "image" ? (
-                      <img src={item.data} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200">
-                        <Video className="h-10 w-10 text-slate-400" />
-                      </div>
-                    )}
-                    {/* Play icon for videos — always visible */}
-                    {item.type === "video" && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-12 w-12 rounded-full bg-black/40 flex items-center justify-center">
-                          <Play className="h-6 w-6 text-white ml-0.5" />
-                        </div>
-                      </div>
-                    )}
-                    {/* Type badge */}
-                    <div className="absolute top-2 left-2">
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-black/50 text-white backdrop-blur-sm">
-                        {item.type === "video" ? <Video className="h-2.5 w-2.5" /> : <ImageIcon className="h-2.5 w-2.5" />}
-                        {item.type}
-                      </span>
-                    </div>
-                  </button>
-                  <div className="px-2.5 py-2 text-[11px] text-foreground font-medium truncate" title={item.name}>
-                    {item.name}
-                  </div>
-                  {canEdit && (
-                    <button
-                      onClick={() => setDeleteConfirm(item.id)}
-                      className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-white/90 border border-border/60 grid place-items-center text-muted-foreground hover:text-destructive active:text-destructive shadow-sm"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </motion.div>
+                  item={item}
+                  isFav={favIds.has(item.id)}
+                  canEdit={canEdit}
+                  onOpen={() => setLightbox({ items: currentItems, idx: i })}
+                  onToggleFav={() => toggleFavorite(item.id)}
+                  onDelete={canEdit ? () => setDeleteConfirm(item.id) : undefined}
+                />
               ))}
             </div>
           </>
         )}
-
-        {/* Upload zone — only when inside a folder */}
-        {canEdit && currentFolderId && (
-          <UploadZone onFiles={handleFiles} uploading={uploading} />
-        )}
+        {canEdit && currentFolderId && <UploadZone onFiles={handleFiles} uploading={uploading} />}
       </div>
     );
   }
 
-  /* ─────────────────────── Delete modal ────────────────────── */
+  /* ─────────────── Delete modal ─────────────── */
   function DeleteModal() {
     const isFolder = folders.some(f => f.id === deleteConfirm);
     const folder   = folders.find(f => f.id === deleteConfirm);
@@ -602,15 +642,11 @@ export function CatalogPage() {
       <AnimatePresence>
         {deleteConfirm && (
           <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-              onClick={() => setDeleteConfirm(null)}
-            />
+              onClick={() => setDeleteConfirm(null)} />
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 32 }}
+              initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 32 }}
               className="fixed inset-x-4 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl p-6 max-w-sm sm:w-full"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.5rem)" }}
             >
@@ -627,16 +663,13 @@ export function CatalogPage() {
                   : <>Delete <strong>{item?.name}</strong>? This cannot be undone.</>}
               </p>
               <div className="flex gap-3">
-                <button
-                  onClick={() => setDeleteConfirm(null)}
-                  className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-secondary active:bg-secondary"
-                >
+                <button onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 h-11 rounded-xl border border-border text-sm font-medium hover:bg-secondary active:bg-secondary">
                   Cancel
                 </button>
                 <button
                   onClick={() => isFolder ? deleteFolder(deleteConfirm!) : deleteItem(deleteConfirm!)}
-                  className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium active:opacity-90"
-                >
+                  className="flex-1 h-11 rounded-xl bg-destructive text-destructive-foreground text-sm font-medium active:opacity-90">
                   Delete
                 </button>
               </div>
@@ -647,19 +680,18 @@ export function CatalogPage() {
     );
   }
 
-  /* ─────────────────────────── Render ──────────────────────── */
-  const isRoot = folderPath.length === 0;
-
+  /* ─────────────── Render ─────────────── */
   return (
     <div className="max-w-7xl mx-auto space-y-5">
 
-      {/* ── Page header ── */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="min-w-0">
           <Breadcrumb />
           <p className="text-xs text-muted-foreground mt-1">
             {subfolders.length} folder{subfolders.length !== 1 ? "s" : ""}
             {currentFolderId && currentItems.length > 0 && ` · ${currentItems.length} file${currentItems.length !== 1 ? "s" : ""}`}
+            {isRoot && favoriteItems.length > 0 && ` · ${favoriteItems.length} favourite${favoriteItems.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         {canEdit && (
@@ -667,13 +699,12 @@ export function CatalogPage() {
             onClick={() => { setShowNewFolder(v => !v); setNewFolderName(""); }}
             className="flex items-center gap-2 px-4 h-10 rounded-xl btn-hero text-sm font-medium shrink-0"
           >
-            <Plus className="h-4 w-4" />
-            New Folder
+            <Plus className="h-4 w-4" /> New Folder
           </button>
         )}
       </div>
 
-      {/* ── New folder inline row (no height animation — avoids full-screen bug) ── */}
+      {/* New folder input (no height animation — avoids full-screen bug) */}
       {showNewFolder && (
         <div className="flex items-center gap-3 p-4 rounded-2xl border border-primary/30 bg-primary/5">
           <Folder className="h-5 w-5 text-primary shrink-0" />
@@ -688,28 +719,22 @@ export function CatalogPage() {
               if (e.key === "Escape") setShowNewFolder(false);
             }}
           />
-          <button
-            onClick={createFolder}
-            className="h-9 w-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0"
-          >
+          <button onClick={createFolder}
+            className="h-9 w-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shrink-0">
             <Check className="h-4 w-4" />
           </button>
-          <button
-            onClick={() => setShowNewFolder(false)}
-            className="h-9 w-9 rounded-xl bg-secondary grid place-items-center shrink-0"
-          >
+          <button onClick={() => setShowNewFolder(false)}
+            className="h-9 w-9 rounded-xl bg-secondary grid place-items-center shrink-0">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* ── Error banner ── */}
+      {/* Error banner */}
       <AnimatePresence>
         {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-3 p-3 rounded-xl bg-destructive/10 text-destructive text-sm"
-          >
+          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="flex items-center gap-3 p-3 rounded-xl bg-destructive/10 text-destructive text-sm">
             <AlertCircle className="h-4 w-4 shrink-0" />
             <span className="flex-1">{error}</span>
             <button onClick={() => setError(null)} className="shrink-0 p-1"><X className="h-4 w-4" /></button>
@@ -717,20 +742,14 @@ export function CatalogPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Folders section ── */}
-      {subfolders.length > 0 && (
-        <div className="space-y-3">
-          {!isRoot && (
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-0.5">
-              Folders · {subfolders.length}
-            </p>
-          )}
-          <FolderGrid />
-        </div>
-      )}
+      {/* ── Favorites (root only) ── */}
+      <FavoritesSection />
 
-      {/* ── Empty state (root, no folders) ── */}
-      {isRoot && subfolders.length === 0 && !showNewFolder && (
+      {/* ── Folder grid ── */}
+      <FolderGrid />
+
+      {/* ── Empty states ── */}
+      {isRoot && subfolders.length === 0 && favoriteItems.length === 0 && !showNewFolder && (
         <div className="flex flex-col items-center justify-center py-16 text-center gap-4">
           <div className="h-20 w-20 rounded-3xl bg-primary/10 grid place-items-center">
             <FolderOpen className="h-10 w-10 text-primary/40" />
@@ -742,17 +761,14 @@ export function CatalogPage() {
             </p>
           </div>
           {canEdit && (
-            <button
-              onClick={() => setShowNewFolder(true)}
-              className="flex items-center gap-2 px-5 h-11 rounded-xl btn-hero text-sm font-medium"
-            >
+            <button onClick={() => setShowNewFolder(true)}
+              className="flex items-center gap-2 px-5 h-11 rounded-xl btn-hero text-sm font-medium">
               <Plus className="h-4 w-4" /> New Folder
             </button>
           )}
         </div>
       )}
 
-      {/* ── Empty state (inside a folder, nothing yet) ── */}
       {!isRoot && subfolders.length === 0 && currentItems.length === 0 && !showNewFolder && (
         <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
           <div className="h-16 w-16 rounded-2xl bg-primary/10 grid place-items-center">
@@ -767,18 +783,14 @@ export function CatalogPage() {
         </div>
       )}
 
-      {/* ── Items + upload zone ── */}
+      {/* ── Item gallery + upload zone ── */}
       <ItemGallery />
 
       {/* ── Modals ── */}
       <DeleteModal />
       <AnimatePresence>
         {lightbox && (
-          <Lightbox
-            items={lightbox.items}
-            startIndex={lightbox.idx}
-            onClose={() => setLightbox(null)}
-          />
+          <Lightbox items={lightbox.items} startIndex={lightbox.idx} onClose={() => setLightbox(null)} />
         )}
       </AnimatePresence>
     </div>
