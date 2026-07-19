@@ -298,7 +298,7 @@ export function printInvoice(
         <th class="l">DESCRIPTION</th>
         <th style="width:42px">PCS</th>
         <th style="width:64px">WEIGHT</th>
-        <th style="width:88px">PRICE<br/>USD / HKD</th>
+        <th style="width:88px">PRICE<br/>USD</th>
         <th style="width:70px">TOTAL</th>
       </tr>
     </thead>
