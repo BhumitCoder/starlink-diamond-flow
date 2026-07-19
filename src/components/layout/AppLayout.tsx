@@ -402,16 +402,16 @@ export function AppLayout() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl overflow-hidden"
-              style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+              className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white rounded-t-3xl shadow-2xl flex flex-col"
+              style={{ maxHeight: "90vh" }}
             >
               {/* Handle bar */}
-              <div className="flex justify-center pt-3 pb-1">
+              <div className="flex justify-center pt-3 pb-1 shrink-0">
                 <div className="h-1 w-10 rounded-full bg-border" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
+              <div className="flex items-center justify-between px-5 py-3 border-b border-border/60 shrink-0">
                 <div>
                   <p className="font-display text-lg text-brand-dark">More</p>
                   <p className="text-xs text-muted-foreground capitalize">{user?.name} · {user?.role}</p>
@@ -424,54 +424,59 @@ export function AppLayout() {
                 </button>
               </div>
 
-              {/* User avatar strip */}
-              <div className="px-5 py-4 flex items-center gap-3 bg-secondary/30">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white text-base font-bold grid place-items-center shrink-0 shadow-soft">
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="font-semibold text-brand-dark truncate">{user?.name}</p>
-                  <p className="text-xs text-muted-foreground">{ROLE_LABEL[user?.role ?? ""] ?? user?.role}</p>
-                </div>
-              </div>
-
-              {/* Nav items grid */}
-              <div className="px-4 pt-4 pb-2">
-                <div className="grid grid-cols-4 gap-3">
-                  {moreNav.map(item => {
-                    const isActive = loc.pathname === item.to || (item.to !== "/" && loc.pathname.startsWith(item.to + "/"));
-                    const colorClass = ICON_COLORS[item.to] || "bg-primary/15 text-primary";
-                    return (
-                      <button
-                        key={item.to}
-                        onClick={() => { navigate(item.to); setMoreOpen(false); }}
-                        className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95
-                          ${isActive ? "bg-primary/10 ring-2 ring-primary/20" : "hover:bg-secondary/60"}`}
-                      >
-                        <div className={`h-12 w-12 rounded-2xl grid place-items-center ${colorClass}`}>
-                          <item.icon className="h-6 w-6" />
-                        </div>
-                        <span className={`text-[11px] font-medium text-center leading-tight ${isActive ? "text-primary" : "text-foreground"}`}>
-                          {item.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Divider + Sign out */}
-              <div className="mx-4 mt-3 pt-3 border-t border-border/60">
-                <button
-                  onClick={() => { logout(); navigate("/login"); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-destructive/10 grid place-items-center shrink-0">
-                    <LogOut className="h-5 w-5" />
+              {/* Scrollable body */}
+              <div className="flex-1 overflow-y-auto overscroll-contain">
+                {/* User avatar strip */}
+                <div className="px-5 py-4 flex items-center gap-3 bg-secondary/30">
+                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-brand-dark text-white text-base font-bold grid place-items-center shrink-0 shadow-soft">
+                    {initials}
                   </div>
-                  <span className="font-medium">Sign Out</span>
-                  <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
-                </button>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-brand-dark truncate">{user?.name}</p>
+                    <p className="text-xs text-muted-foreground">{ROLE_LABEL[user?.role ?? ""] ?? user?.role}</p>
+                  </div>
+                </div>
+
+                {/* Nav items grid */}
+                <div className="px-4 pt-4 pb-2">
+                  <div className="grid grid-cols-4 gap-3">
+                    {moreNav.map(item => {
+                      const isActive = loc.pathname === item.to || (item.to !== "/" && loc.pathname.startsWith(item.to + "/"));
+                      const colorClass = ICON_COLORS[item.to] || "bg-primary/15 text-primary";
+                      return (
+                        <button
+                          key={item.to}
+                          onClick={() => { navigate(item.to); setMoreOpen(false); }}
+                          className={`flex flex-col items-center gap-2 p-3 rounded-2xl transition-all active:scale-95
+                            ${isActive ? "bg-primary/10 ring-2 ring-primary/20" : "hover:bg-secondary/60"}`}
+                        >
+                          <div className={`h-12 w-12 rounded-2xl grid place-items-center ${colorClass}`}>
+                            <item.icon className="h-6 w-6" />
+                          </div>
+                          <span className={`text-[11px] font-medium text-center leading-tight ${isActive ? "text-primary" : "text-foreground"}`}>
+                            {item.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Divider + Sign out */}
+                <div className="mx-4 mt-3 pt-3 border-t border-border/60"
+                  style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+                >
+                  <button
+                    onClick={() => { logout(); navigate("/login"); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-destructive/10 grid place-items-center shrink-0">
+                      <LogOut className="h-5 w-5" />
+                    </div>
+                    <span className="font-medium">Sign Out</span>
+                    <ChevronRight className="h-4 w-4 ml-auto opacity-50" />
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
