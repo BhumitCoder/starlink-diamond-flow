@@ -158,6 +158,7 @@ export interface Expense {
 export interface CatalogFolder {
   id: string;
   name: string;
+  parentId?: string | null; // null / undefined = root
   createdBy: string; // userId
   createdAt: string;
 }
