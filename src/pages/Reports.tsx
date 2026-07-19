@@ -33,14 +33,14 @@ function SummaryCard({
     rose:    "bg-rose-500/10 text-rose-600",
   };
   return (
-    <div className="card-luxe p-5 flex items-center gap-4">
-      <div className={`h-12 w-12 rounded-2xl grid place-items-center shrink-0 ${colorMap[color] ?? colorMap.primary}`}>
-        <Icon className="h-6 w-6" />
+    <div className="card-luxe p-3.5 sm:p-5 flex items-center gap-3 sm:gap-4">
+      <div className={`h-9 w-9 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl grid place-items-center shrink-0 ${colorMap[color] ?? colorMap.primary}`}>
+        <Icon className="h-4.5 w-4.5 sm:h-6 sm:w-6 h-[18px] w-[18px] sm:h-6 sm:w-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="font-display text-2xl text-brand-dark leading-tight">{value}</p>
-        {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+        <p className="text-[10px] sm:text-xs text-muted-foreground">{label}</p>
+        <p className="font-display text-lg sm:text-2xl text-brand-dark leading-tight">{value}</p>
+        {sub && <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 hidden sm:block">{sub}</p>}
       </div>
     </div>
   );
@@ -318,31 +318,31 @@ export function ReportsPage() {
         ) : (
           <>
             {/* Big stat */}
-            <div className="flex items-end gap-3 mb-5">
+            <div className="flex items-end gap-2 sm:gap-3 mb-5 flex-wrap">
               <div>
-                <p className="font-display text-5xl text-brand-dark leading-none">{speedRows.length}</p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="font-display text-4xl sm:text-5xl text-brand-dark leading-none">{speedRows.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   order{speedRows.length !== 1 ? "s" : ""} dispatched
                 </p>
               </div>
-              <div className="pb-1 text-muted-foreground text-2xl font-light">in</div>
+              <div className="pb-1 text-muted-foreground text-xl sm:text-2xl font-light">in avg</div>
               <div>
-                <p className="font-display text-5xl text-primary leading-none">{avgDays}</p>
-                <p className="text-sm text-muted-foreground mt-1">avg days each</p>
+                <p className="font-display text-4xl sm:text-5xl text-primary leading-none">{avgDays}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">days each</p>
               </div>
             </div>
 
             {/* Speed bands */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {[
-                { label: "Fast",   sub: "≤ 7 days",   count: fast,   color: "bg-success/10 border-success/30 text-success" },
-                { label: "Normal", sub: "8 – 20 days", count: normal, color: "bg-amber-50 border-amber-200 text-amber-700" },
-                { label: "Slow",   sub: "> 20 days",   count: slow,   color: "bg-rose-50 border-rose-200 text-rose-600" },
+                { label: "Fast",   sub: "≤ 7 days",  count: fast,   color: "bg-success/10 border-success/30 text-success" },
+                { label: "Normal", sub: "8–20 days",  count: normal, color: "bg-amber-50 border-amber-200 text-amber-700" },
+                { label: "Slow",   sub: ">20 days",   count: slow,   color: "bg-rose-50 border-rose-200 text-rose-600" },
               ].map(b => (
-                <div key={b.label} className={`rounded-xl border p-3 text-center ${b.color}`}>
-                  <p className="font-display text-2xl">{b.count}</p>
-                  <p className="text-xs font-semibold mt-0.5">{b.label}</p>
-                  <p className="text-[10px] opacity-70">{b.sub}</p>
+                <div key={b.label} className={`rounded-xl border p-2.5 sm:p-3 text-center ${b.color}`}>
+                  <p className="font-display text-xl sm:text-2xl">{b.count}</p>
+                  <p className="text-[11px] sm:text-xs font-semibold mt-0.5">{b.label}</p>
+                  <p className="text-[9px] sm:text-[10px] opacity-70">{b.sub}</p>
                 </div>
               ))}
             </div>
