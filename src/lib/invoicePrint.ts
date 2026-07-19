@@ -321,12 +321,10 @@ export function printInvoice(
       <div class="qr-block">
         <div class="qr-lbl">SCAN TO PAY</div>
         ${qr(settings.invoiceQr1)}
-        <div class="qr-brand">venmo</div>
       </div>
       <div class="qr-block">
         <div class="qr-lbl">SCAN TO PAY</div>
         ${qr(settings.invoiceQr2)}
-        <div class="qr-brand">venmo</div>
       </div>
     </div>
 
