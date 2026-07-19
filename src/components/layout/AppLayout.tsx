@@ -18,7 +18,7 @@ const NAV: NavItem[] = [
   { to: "/catalog", label: "Catalog", icon: FolderOpen },
   { to: "/messages", label: "Messages", icon: MessageSquare },
   { to: "/notifications", label: "Alerts", icon: Bell },
-  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
 ];
 
@@ -38,7 +38,7 @@ const MORE_NAV: NavItem[] = [
   { to: "/expenses", label: "Expenses", icon: Wallet, roles: ["admin","employee"] },
   { to: "/clients", label: "Clients", icon: Users, roles: ["admin","employee"] },
   { to: "/employees", label: "Employees", icon: Briefcase, roles: ["admin"] },
-  { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
+  { to: "/reports", label: "Reports", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
   { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/search", label: "Search", icon: SearchIcon },

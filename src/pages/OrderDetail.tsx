@@ -703,7 +703,9 @@ export function OrderDetailPage() {
                     </p>
                   )}
                   {canEditStage() && !isDone && (
-                    <Button size="sm" variant="outline" onClick={() => advanceStep(idx)} className="mt-2 h-7 rounded-lg text-xs">Mark complete</Button>
+                    isActive
+                      ? <Button size="sm" variant="outline" onClick={() => advanceStep(idx)} className="mt-2 h-7 rounded-lg text-xs">Mark complete</Button>
+                      : <p className="text-[10px] text-muted-foreground/60 mt-1.5 select-none">⏳ Complete previous step first</p>
                   )}
                 </div>
               </motion.div>
