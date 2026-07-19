@@ -271,11 +271,12 @@ function UploadZone({ onFiles, uploading }: { onFiles(f: FileList): void; upload
 /*  Reusable item card                                             */
 /* ─────────────────────────────────────────────────────────────── */
 function ItemCard({
-  item, isFav, canEdit, onOpen, onToggleFav, onDelete,
+  item, isFav, canEdit, folderName, onOpen, onToggleFav, onDelete,
 }: {
   item: CatalogItem;
   isFav: boolean;
   canEdit: boolean;
+  folderName?: string;
   onOpen(): void;
   onToggleFav(): void;
   onDelete?(): void;
@@ -314,11 +315,19 @@ function ItemCard({
         )}
       </button>
 
-      {/* Bottom row: name + heart */}
-      <div className="flex items-center gap-1 px-2.5 py-2">
-        <p className="flex-1 text-[11px] text-foreground font-medium truncate min-w-0" title={item.name}>
-          {item.name}
-        </p>
+      {/* Bottom row: name + folder tag + heart */}
+      <div className="flex items-center gap-1 px-2.5 pt-2 pb-1.5">
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] text-foreground font-medium truncate" title={item.name}>
+            {item.name}
+          </p>
+          {folderName && (
+            <p className="text-[10px] text-muted-foreground truncate flex items-center gap-0.5 mt-0.5">
+              <Folder className="h-2.5 w-2.5 shrink-0 text-amber-500" />
+              {folderName}
+            </p>
+          )}
+        </div>
         <HeartBtn active={isFav} onToggle={e => { e.stopPropagation(); onToggleFav(); }} />
       </div>
     </motion.div>
@@ -583,17 +592,21 @@ export function CatalogPage() {
           </p>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          {favoriteItems.map((item, i) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              isFav={true}
-              canEdit={canEdit}
-              onOpen={() => setLightbox({ items: favoriteItems, idx: i })}
-              onToggleFav={() => toggleFavorite(item.id)}
-              onDelete={canEdit ? () => setDeleteConfirm(item.id) : undefined}
-            />
-          ))}
+          {favoriteItems.map((item, i) => {
+            const folder = folders.find(f => f.id === item.folderId);
+            return (
+              <ItemCard
+                key={item.id}
+                item={item}
+                isFav={true}
+                canEdit={canEdit}
+                folderName={folder?.name}
+                onOpen={() => setLightbox({ items: favoriteItems, idx: i })}
+                onToggleFav={() => toggleFavorite(item.id)}
+                onDelete={canEdit ? () => setDeleteConfirm(item.id) : undefined}
+              />
+            );
+          })}
         </div>
         <div className="h-px bg-border/50 mt-2" />
       </div>
@@ -625,7 +638,6 @@ export function CatalogPage() {
             </div>
           </>
         )}
-        {canEdit && currentFolderId && <UploadZone onFiles={handleFiles} uploading={uploading} />}
       </div>
     );
   }
@@ -695,12 +707,37 @@ export function CatalogPage() {
           </p>
         </div>
         {canEdit && (
-          <button
-            onClick={() => { setShowNewFolder(v => !v); setNewFolderName(""); }}
-            className="flex items-center gap-2 px-4 h-10 rounded-xl btn-hero text-sm font-medium shrink-0"
-          >
-            <Plus className="h-4 w-4" /> New Folder
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Upload — only shown when inside a folder */}
+            {currentFolderId && (
+              <>
+                <input
+                  id="catalog-upload-input"
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="hidden"
+                  onChange={e => { if (e.target.files) handleFiles(e.target.files); e.currentTarget.value = ""; }}
+                />
+                <button
+                  onClick={() => document.getElementById("catalog-upload-input")?.click()}
+                  disabled={uploading}
+                  className="flex items-center gap-2 px-4 h-10 rounded-xl border border-border bg-white text-sm font-medium text-foreground hover:bg-secondary active:bg-secondary disabled:opacity-60 transition-colors"
+                >
+                  {uploading
+                    ? <span className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    : <Upload className="h-4 w-4" />}
+                  {uploading ? "Uploading…" : "Upload"}
+                </button>
+              </>
+            )}
+            <button
+              onClick={() => { setShowNewFolder(v => !v); setNewFolderName(""); }}
+              className="flex items-center gap-2 px-4 h-10 rounded-xl btn-hero text-sm font-medium"
+            >
+              <Plus className="h-4 w-4" /> New Folder
+            </button>
+          </div>
         )}
       </div>
 
