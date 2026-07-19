@@ -27,7 +27,7 @@ const MOBILE_NAV: NavItem[] = [
   { to: "/", label: "Home", icon: LayoutDashboard },
   { to: "/orders", label: "Orders", icon: Package },
   { to: "/messages", label: "Chat", icon: MessageSquare },
-  { to: "/notifications", label: "Alerts", icon: Bell },
+  { to: "/catalog", label: "Catalog", icon: FolderOpen },
 ];
 
 /* Items shown inside the "More" drawer */
@@ -40,6 +40,7 @@ const MORE_NAV: NavItem[] = [
   { to: "/employees", label: "Employees", icon: Briefcase, roles: ["admin"] },
   { to: "/reports", label: "Reports", icon: BarChart3, roles: ["admin"] },
   { to: "/settings", label: "Settings", icon: Settings, roles: ["admin","employee"] },
+  { to: "/notifications", label: "Alerts", icon: Bell },
   { to: "/search", label: "Search", icon: SearchIcon },
   { to: "/profile", label: "My Profile", icon: User },
 ];
