@@ -396,7 +396,7 @@ export function OrderDetailPage() {
                 </p>
               </div>
             </div>
-            {user!.role === "admin" && (
+            {canEditStage() && (
               <Button
                 size="sm" variant="outline" className="rounded-xl gap-2"
                 onClick={() => {
