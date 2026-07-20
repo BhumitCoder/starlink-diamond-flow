@@ -139,7 +139,7 @@ export function AppLayout() {
   });
 
   return (
-    <div className="h-screen overflow-hidden bg-background flex">
+    <div className="h-[100dvh] overflow-hidden bg-background flex">
       {/* ── Sidebar (desktop) ── */}
       <aside className="hidden md:flex shrink-0 flex-col border-r bg-sidebar h-screen" style={{ width: '16rem', minWidth: '16rem' }}>
         <div className="px-5 py-5 flex items-center">
@@ -185,7 +185,7 @@ export function AppLayout() {
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
 
         {/* ── Top bar ── */}
-        <header className="shrink-0 z-30 glass border-b px-4 md:px-6 h-16 flex items-center gap-4">
+        <header className="shrink-0 sticky top-0 z-30 glass border-b px-4 md:px-6 h-16 flex items-center gap-4">
 
           {/* Mobile logo */}
           <div className="md:hidden flex items-center shrink-0">
@@ -292,7 +292,7 @@ export function AppLayout() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}
-          className="flex-1 overflow-y-auto overscroll-contain pb-24 md:pb-8 px-4 md:px-8 pt-6">
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-24 md:pb-8 px-4 md:px-8 pt-6">
           <Outlet />
         </motion.main>
 
