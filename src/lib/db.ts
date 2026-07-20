@@ -67,8 +67,18 @@ export interface Order {
   metal: "Gold" | "White Gold" | "Rose Gold" | "Platinum" | "Silver";
   diamondType: "Natural" | "Lab Grown";
   quantity: number;
-  diamondWeight: number;
+  diamondWeight: number;     // estimated diamond weight (ct) — entered at order creation
   metalWeight: number;
+  // Estimated weights — entered at order creation (piece not made yet)
+  estimatedGrossWeight?: number;  // grams
+  estimatedNetWeight?: number;    // grams
+  // Actual details — filled in after production / Final Approval by admin
+  actualGrossWeight?: number;     // grams
+  actualNetWeight?: number;       // grams
+  actualDiamondWeight?: number;   // carats
+  actualMetalRate?: number;       // $ per gram
+  actualDiamondRate?: number;     // $ per carat
+  actualMakingCharges?: number;   // flat $ making charges
   images: string[];          // up to 3 reference images (base64)
   instructions: string;
   expectedDelivery: string;
@@ -234,7 +244,7 @@ export function loadDb(): DB {
   try {
     const db = JSON.parse(raw) as DB;
     // backward-compat
-    db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], ...o }));
+    db.orders = db.orders.map(o => ({ shippingCharge: 0, advances: [], estimatedGrossWeight: undefined, estimatedNetWeight: undefined, ...o }));
     db.orders.forEach(insertDiamondPurchaseStep);
     if (!db.tasks) db.tasks = [];
     if (!db.expenses) db.expenses = [];

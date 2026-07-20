@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import {
   ArrowLeft, CheckCircle2, Circle, Loader2, Package, Printer,
   DollarSign, Plus, TrendingUp, AlertCircle, Wallet,
-  ImagePlus, Truck, ExternalLink, Eye,
+  ImagePlus, Truck, ExternalLink, Eye, Scale, Calculator,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -61,6 +61,15 @@ export function OrderDetailPage() {
   const [courierName, setCourierName] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [trackingLink, setTrackingLink] = useState("");
+
+  // Actual weights & pricing form
+  const [showActualForm, setShowActualForm] = useState(false);
+  const [actGrossW, setActGrossW] = useState("");
+  const [actNetW, setActNetW] = useState("");
+  const [actDiamW, setActDiamW] = useState("");
+  const [actMetalR, setActMetalR] = useState("");
+  const [actDiamR, setActDiamR] = useState("");
+  const [actMaking, setActMaking] = useState("");
 
   // Pricing form (admin/employee set the order value — client never sets this)
   const [showPricing, setShowPricing] = useState(false);
@@ -140,6 +149,39 @@ export function OrderDetailPage() {
     setCadUploading(false);
   };
 
+  const saveActualDetails = () => {
+    const nw = parseFloat(actNetW);
+    const dw = parseFloat(actDiamW);
+    const mr = parseFloat(actMetalR);
+    const dr = parseFloat(actDiamR);
+    const gw = parseFloat(actGrossW) || 0;
+    const mc = parseFloat(actMaking) || 0;
+    if (!nw || nw <= 0) { toast.error("Enter actual net weight"); return; }
+    if (!dw || dw <= 0) { toast.error("Enter actual diamond weight"); return; }
+    if (!mr || mr <= 0) { toast.error("Enter metal rate ($/g)"); return; }
+    if (!dr || dr <= 0) { toast.error("Enter diamond rate ($/ct)"); return; }
+    const finalAmount = Math.round((nw * mr) + (dw * dr) + mc);
+    updateDb(d => {
+      const o = d.orders.find(x => x.id === order.id)!;
+      o.actualGrossWeight   = gw || undefined;
+      o.actualNetWeight     = nw;
+      o.actualDiamondWeight = dw;
+      o.actualMetalRate     = mr;
+      o.actualDiamondRate   = dr;
+      o.actualMakingCharges = mc || undefined;
+      o.amount = finalAmount;
+      const clientUser = d.users.find(u => u.clientId === o.clientId);
+      if (clientUser) d.notifications.unshift({
+        id: uid("n_"), userId: clientUser.id,
+        title: "Order Finalized",
+        body: `${o.orderNumber} final amount confirmed: ${fmtMoney(finalAmount)}`,
+        type: "info", read: false, createdAt: new Date().toISOString(),
+      });
+    });
+    toast.success("Actual details saved — order value updated");
+    setShowActualForm(false);
+  };
+
   const saveDispatch = () => {
     if (!courierName.trim() || !trackingNumber.trim()) {
       toast.error("Enter both courier name and tracking number");
@@ -214,7 +256,9 @@ export function OrderDetailPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 text-sm">
           {([
             ["Quantity", `${order.quantity} pcs`],
-            ["Diamond", `${order.diamondWeight} ct (${order.diamondType})`],
+            ["Est. Diamond Wt", `${order.diamondWeight} ct (${order.diamondType})`],
+            ...(order.estimatedGrossWeight ? [["Est. Gross Weight", `${order.estimatedGrossWeight}g`]] : []),
+            ...(order.estimatedNetWeight   ? [["Est. Net Weight",   `${order.estimatedNetWeight}g`]]   : []),
             ["Priority", order.priority],
             ["Delivery Date", fmtDate(order.expectedDelivery)],
             ["Assigned to", employee?.name || "—"],
@@ -334,6 +378,223 @@ export function OrderDetailPage() {
           </div>
         )}
       </div>
+
+      {/* ── Actual Weights & Final Pricing Card ── */}
+      {user!.role !== "client" && (
+        <div className="card-luxe p-6 space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 grid place-items-center">
+                <Scale className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg text-brand-dark">Actual Weights & Final Pricing</h3>
+                <p className="text-xs text-muted-foreground">
+                  {order.actualNetWeight
+                    ? "Actual details on file — order value calculated from these"
+                    : "Fill in after the piece is ready (post Final Approval)"}
+                </p>
+              </div>
+            </div>
+            {user!.role === "admin" && (
+              <Button
+                size="sm" variant="outline" className="rounded-xl gap-2"
+                onClick={() => {
+                  setActGrossW(order.actualGrossWeight ? String(order.actualGrossWeight) : "");
+                  setActNetW(order.actualNetWeight ? String(order.actualNetWeight) : "");
+                  setActDiamW(order.actualDiamondWeight ? String(order.actualDiamondWeight) : "");
+                  setActMetalR(order.actualMetalRate ? String(order.actualMetalRate) : String(db.settings.metalRate ?? 65));
+                  setActDiamR(order.actualDiamondRate ? String(order.actualDiamondRate) : String(db.settings.diamondRate ?? 3500));
+                  setActMaking(order.actualMakingCharges ? String(order.actualMakingCharges) : "");
+                  setShowActualForm(v => !v);
+                }}
+              >
+                <Calculator className="h-3.5 w-3.5" />
+                {order.actualNetWeight ? "Edit Actual Details" : "Enter Actual Details"}
+              </Button>
+            )}
+          </div>
+
+          {/* Estimated vs actual comparison */}
+          {(order.estimatedGrossWeight || order.estimatedNetWeight || order.diamondWeight) && (
+            <div className="rounded-xl bg-secondary/60 p-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Estimated at Order Time</p>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                {order.estimatedGrossWeight ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Gross Weight</p>
+                    <p className="font-medium">{order.estimatedGrossWeight}g</p>
+                  </div>
+                ) : <div />}
+                {order.estimatedNetWeight ? (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Net Weight</p>
+                    <p className="font-medium">{order.estimatedNetWeight}g</p>
+                  </div>
+                ) : <div />}
+                <div>
+                  <p className="text-xs text-muted-foreground">Diamond Weight</p>
+                  <p className="font-medium">{order.diamondWeight}ct</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Filled actual details */}
+          {order.actualNetWeight && !showActualForm && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actual Details (Confirmed)</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {order.actualGrossWeight && (
+                  <div className="p-3 rounded-xl bg-secondary text-sm">
+                    <p className="text-xs text-muted-foreground">Gross Weight</p>
+                    <p className="font-semibold">{order.actualGrossWeight}g</p>
+                  </div>
+                )}
+                <div className="p-3 rounded-xl bg-secondary text-sm">
+                  <p className="text-xs text-muted-foreground">Net Weight</p>
+                  <p className="font-semibold">{order.actualNetWeight}g</p>
+                </div>
+                <div className="p-3 rounded-xl bg-secondary text-sm">
+                  <p className="text-xs text-muted-foreground">Diamond Weight</p>
+                  <p className="font-semibold">{order.actualDiamondWeight}ct</p>
+                </div>
+              </div>
+              <div className="rounded-xl border border-border/60 p-3 space-y-2 text-sm">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Price Breakdown</p>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Metal ({order.actualNetWeight}g × ${order.actualMetalRate}/g)</span>
+                  <span className="font-medium">{fmtMoney(Math.round((order.actualNetWeight ?? 0) * (order.actualMetalRate ?? 0)))}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Diamond ({order.actualDiamondWeight}ct × ${order.actualDiamondRate}/ct)</span>
+                  <span className="font-medium">{fmtMoney(Math.round((order.actualDiamondWeight ?? 0) * (order.actualDiamondRate ?? 0)))}</span>
+                </div>
+                {(order.actualMakingCharges ?? 0) > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Making Charges</span>
+                    <span className="font-medium">{fmtMoney(order.actualMakingCharges ?? 0)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1.5 border-t border-border/60">
+                  <span className="font-semibold">Final Order Value</span>
+                  <span className="font-bold text-primary">{fmtMoney(order.amount)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pending notice */}
+          {!order.actualNetWeight && !showActualForm && (
+            <div className="rounded-xl border border-dashed border-amber-300 bg-amber-50/60 p-4 flex items-start gap-3">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">Actual details not yet entered</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Enter actual weights and rates after the piece is ready — the system will auto-calculate the final order value.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Edit / entry form */}
+          <AnimatePresence>
+            {showActualForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="pt-3 border-t border-border/60 space-y-4">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Actual Weights</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Gross Weight (g)</Label>
+                        <Input type="number" step="0.001" min={0} value={actGrossW}
+                          onChange={e => setActGrossW(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0.000" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Net Weight (g) *</Label>
+                        <Input type="number" step="0.001" min={0} value={actNetW}
+                          onChange={e => setActNetW(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0.000" autoFocus />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Diamond Weight (ct) *</Label>
+                        <Input type="number" step="0.001" min={0} value={actDiamW}
+                          onChange={e => setActDiamW(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0.000" />
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Rates & Charges</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Metal Rate ($/g) *</Label>
+                        <Input type="number" step="0.01" min={0} value={actMetalR}
+                          onChange={e => setActMetalR(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Diamond Rate ($/ct) *</Label>
+                        <Input type="number" step="0.01" min={0} value={actDiamR}
+                          onChange={e => setActDiamR(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Making Charges ($)</Label>
+                        <Input type="number" step="0.01" min={0} value={actMaking}
+                          onChange={e => setActMaking(e.target.value)}
+                          className="rounded-xl h-10" placeholder="0" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live calculation preview */}
+                  {actNetW && actDiamW && actMetalR && actDiamR && parseFloat(actNetW) > 0 && parseFloat(actDiamW) > 0 && (
+                    <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5 text-sm">
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wider">Live Calculation</p>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Metal: {actNetW}g × ${actMetalR}/g</span>
+                        <span className="font-medium text-foreground">${Math.round(parseFloat(actNetW) * parseFloat(actMetalR)).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Diamond: {actDiamW}ct × ${actDiamR}/ct</span>
+                        <span className="font-medium text-foreground">${Math.round(parseFloat(actDiamW) * parseFloat(actDiamR)).toLocaleString()}</span>
+                      </div>
+                      {parseFloat(actMaking) > 0 && (
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Making Charges</span>
+                          <span className="font-medium text-foreground">${(parseFloat(actMaking) || 0).toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold pt-1.5 border-t border-primary/20 text-sm">
+                        <span>Final Order Value</span>
+                        <span className="text-primary">
+                          ${(
+                            Math.round(parseFloat(actNetW) * parseFloat(actMetalR)) +
+                            Math.round(parseFloat(actDiamW) * parseFloat(actDiamR)) +
+                            (parseFloat(actMaking) || 0)
+                          ).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={saveActualDetails} className="btn-hero rounded-xl">Save & Update Order Value</Button>
+                    <Button size="sm" variant="outline" onClick={() => setShowActualForm(false)} className="rounded-xl">Cancel</Button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* ── CAD Design Card ── */}
       {showCadSection && (

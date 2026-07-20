@@ -54,6 +54,7 @@ export function NewOrderPage() {
     ? initDb.clients.filter(c => c.status === "active" && c.accountManagerId === user!.id)
     : [];
   const diamondRate     = initDb.settings.diamondRate             ?? 3500;
+  const metalRate       = initDb.settings.metalRate               ?? 65;
   const defaultShipping = initDb.settings.defaultShippingCharge  ?? 0;
 
   const [f, setF] = useState({
@@ -63,6 +64,8 @@ export function NewOrderPage() {
     diamondType: "Natural",
     quantity: 1,
     diamondWeight: 0.5,
+    estimatedGrossWeight: 0,
+    estimatedNetWeight: 0,
     instructions: "",
     expectedDelivery: "",
     priority: "Normal",
@@ -147,6 +150,8 @@ export function NewOrderPage() {
         quantity: Number(f.quantity),
         diamondWeight: Number(f.diamondWeight),
         metalWeight: 0,
+        estimatedGrossWeight: Number(f.estimatedGrossWeight) || undefined,
+        estimatedNetWeight: Number(f.estimatedNetWeight) || undefined,
         images,
         designNumber: f.designNumber || undefined,
         productSize: f.productSize || undefined,
@@ -209,7 +214,7 @@ export function NewOrderPage() {
   const certFee    = f.certificate === "yes" ? (Number(f.certificateFee) || 0) : 0;
   const grandTotal = Number(f.orderValue) + shipping + certFee;
   const balanceDue = Math.max(0, grandTotal - Number(f.advanceAmount));
-  const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate);
+  const autoValue  = Math.round(Number(f.estimatedNetWeight) * metalRate + Number(f.diamondWeight) * diamondRate);
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
@@ -308,10 +313,27 @@ export function NewOrderPage() {
                 className="rounded-xl h-11" />
             </Field>
 
-            <Field label="Diamond Weight (ct)">
+            <Field label="Est. Diamond Weight (ct)">
               <Input type="number" step="0.01" min={0} value={f.diamondWeight}
                 onChange={e => set("diamondWeight", +e.target.value)}
-                className="rounded-xl h-11" />
+                className="rounded-xl h-11" placeholder="0.00" />
+            </Field>
+
+            {/* Estimated weight note */}
+            <div className="col-span-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+              <span className="shrink-0">⚖️</span>
+              <span>Estimated weights — actual values will be confirmed after the piece is made</span>
+            </div>
+
+            <Field label="Est. Gross Weight (g)">
+              <Input type="number" step="0.001" min={0} value={f.estimatedGrossWeight || ""}
+                onChange={e => set("estimatedGrossWeight", +e.target.value)}
+                className="rounded-xl h-11" placeholder="0.000" />
+            </Field>
+            <Field label="Est. Net Weight (g)">
+              <Input type="number" step="0.001" min={0} value={f.estimatedNetWeight || ""}
+                onChange={e => set("estimatedNetWeight", +e.target.value)}
+                className="rounded-xl h-11" placeholder="0.000" />
             </Field>
           </div>
 
@@ -531,11 +553,11 @@ export function NewOrderPage() {
                   <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-foreground">Weight-based estimate</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct
-                      &nbsp;=&nbsp;
-                      <span className="font-semibold text-foreground">${autoValue.toLocaleString()}</span>
-                    </p>
+                    <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                      <p>Metal: {f.estimatedNetWeight || 0}g × ${metalRate}/g = <span className="text-foreground font-medium">${Math.round(Number(f.estimatedNetWeight) * metalRate).toLocaleString()}</span></p>
+                      <p>Diamond: {f.diamondWeight}ct × ${diamondRate.toLocaleString()}/ct = <span className="text-foreground font-medium">${Math.round(Number(f.diamondWeight) * diamondRate).toLocaleString()}</span></p>
+                      <p className="font-semibold text-foreground">Est. Total = ${autoValue.toLocaleString()}</p>
+                    </div>
                   </div>
                 </div>
                 <button type="button" onClick={applyEstimate}
