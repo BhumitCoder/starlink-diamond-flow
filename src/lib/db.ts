@@ -99,7 +99,7 @@ export interface Order {
   trackingLink?: string;
   // Certificate
   certificate?: boolean;
-  certificateFee?: number;  // always 50 when certificate is true
+  certificateFee?: number;  // editable per order
 }
 
 export interface Task {

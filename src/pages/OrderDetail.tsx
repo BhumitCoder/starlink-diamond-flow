@@ -561,7 +561,7 @@ export function OrderDetailPage() {
               {(shipping > 0 || certFee > 0) && (
                 <div className={`col-span-2 ${gridCols.replace("sm:grid-cols-", "sm:col-span-")} px-1 pt-0.5 text-xs text-muted-foreground`}>
                   Order Total: <span className="font-semibold text-foreground">{fmtMoney(total)}</span>
-                  {certFee > 0 && <span className="ml-1 text-amber-600">(incl. $50 certificate fee)</span>}
+                  {certFee > 0 && <span className="ml-1 text-amber-600">(incl. {fmtMoney(certFee)} certificate fee)</span>}
                 </div>
               )}
             </div>

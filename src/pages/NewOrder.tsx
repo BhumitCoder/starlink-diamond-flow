@@ -78,6 +78,7 @@ export function NewOrderPage() {
     advanceAmount: 0,
     advanceNote: "",
     certificate: "no" as "yes" | "no",
+    certificateFee: 50,
   });
 
   const [images, setImages] = useState<string[]>([]);
@@ -155,7 +156,7 @@ export function NewOrderPage() {
         rhodium: f.rhodium || undefined,
         stamping: f.stamping || undefined,
         certificate: f.certificate === "yes",
-        certificateFee: f.certificate === "yes" ? 50 : 0,
+        certificateFee: f.certificate === "yes" ? (Number(f.certificateFee) || 0) : 0,
         instructions: f.instructions,
         expectedDelivery: f.expectedDelivery || new Date(Date.now() + 45 * 86400000).toISOString(),
         priority: f.priority as Order["priority"],
@@ -205,7 +206,7 @@ export function NewOrderPage() {
   };
 
   const shipping   = Number(f.shippingCharge) || 0;
-  const certFee    = f.certificate === "yes" ? 50 : 0;
+  const certFee    = f.certificate === "yes" ? (Number(f.certificateFee) || 0) : 0;
   const grandTotal = Number(f.orderValue) + shipping + certFee;
   const balanceDue = Math.max(0, grandTotal - Number(f.advanceAmount));
   const autoValue  = Math.round(Number(f.diamondWeight) * diamondRate);
@@ -486,14 +487,24 @@ export function NewOrderPage() {
           </RadioGroup>
 
           {f.certificate === "yes" && (
-            <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4">
-              <BadgeCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">Certificate fee: $50.00</p>
-                <p className="text-xs text-amber-700 mt-0.5">
-                  A <span className="font-bold">$50 certificate fee</span> will be added to this order's total and shown separately on the invoice.
-                </p>
+            <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="h-5 w-5 text-amber-600 shrink-0" />
+                <p className="text-sm font-semibold text-amber-800">Certificate fee</p>
               </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-600 font-medium text-sm">$</span>
+                <Input
+                  type="number" min={0} step="0.01"
+                  value={f.certificateFee || ""}
+                  onChange={e => set("certificateFee", +e.target.value)}
+                  className="rounded-xl h-11 pl-7 border-amber-300 bg-white focus:ring-amber-400/30"
+                  placeholder="0"
+                />
+              </div>
+              <p className="text-xs text-amber-700">
+                This fee will be added to the order total and shown separately on the invoice.
+              </p>
             </div>
           )}
         </SectionCard>
