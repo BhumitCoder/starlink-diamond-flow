@@ -185,7 +185,8 @@ export function AppLayout() {
       <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden">
 
         {/* ── Top bar ── */}
-        <header className="shrink-0 sticky top-0 z-30 glass border-b px-4 md:px-6 h-16 flex items-center gap-4">
+        <header className="shrink-0 sticky top-0 z-30 glass border-b px-4 md:px-6 flex items-center gap-4"
+          style={{ paddingTop: "calc(env(safe-area-inset-top) + 0px)", height: "calc(env(safe-area-inset-top) + 4rem)" }}>
 
           {/* Mobile logo */}
           <div className="md:hidden flex items-center shrink-0">
