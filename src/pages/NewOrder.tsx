@@ -325,12 +325,12 @@ export function NewOrderPage() {
               <span>Estimated weights — actual values will be confirmed after the piece is made</span>
             </div>
 
-            <Field label="Est. Gross Weight (g)">
+            <Field label="Est. Gross Weight (g)  —  optional">
               <Input type="number" step="0.001" min={0} value={f.estimatedGrossWeight || ""}
                 onChange={e => set("estimatedGrossWeight", +e.target.value)}
                 className="rounded-xl h-11" placeholder="0.000" />
             </Field>
-            <Field label="Est. Net Weight (g)">
+            <Field label="Est. Net Weight (g)  —  optional">
               <Input type="number" step="0.001" min={0} value={f.estimatedNetWeight || ""}
                 onChange={e => set("estimatedNetWeight", +e.target.value)}
                 className="rounded-xl h-11" placeholder="0.000" />
