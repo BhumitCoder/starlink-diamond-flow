@@ -190,32 +190,34 @@ export function ReportsPage() {
 
   /* ── render ── */
   return (
-    <div className="max-w-6xl mx-auto space-y-5">
+    <div className="max-w-6xl mx-auto space-y-4">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl text-brand-dark">
+          <h1 className="font-display text-2xl sm:text-3xl text-brand-dark leading-tight">
             {isClient ? "My Reports" : "Reports"}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {isClient
               ? "Overview of your orders and delivery performance"
               : `${total} order${total !== 1 ? "s" : ""}${hasFilters ? " (filtered)" : " · all time"}`}
           </p>
         </div>
         <button onClick={exportPdf}
-          className="flex items-center gap-2 px-4 h-10 rounded-xl btn-hero text-sm font-medium shrink-0">
-          <Download className="h-4 w-4" /> Download PDF
+          className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 h-9 sm:h-10 rounded-xl btn-hero text-xs sm:text-sm font-medium shrink-0">
+          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Download PDF</span>
+          <span className="sm:hidden">PDF</span>
         </button>
       </div>
 
       {/* ── Filters (admin / employee) ── */}
       {canSeeAll && (
-        <div className="card-luxe p-4">
+        <div className="card-luxe p-3 sm:p-4">
           <div className="flex items-center gap-2 mb-3">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm font-semibold text-brand-dark">Filters</p>
+            <p className="text-xs sm:text-sm font-semibold text-brand-dark tracking-wide uppercase">Filters</p>
             {hasFilters && (
               <button onClick={clearFilters}
                 className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
@@ -299,14 +301,14 @@ export function ReportsPage() {
       </div>
 
       {/* ── Dispatch Speed Card ── */}
-      <div className="card-luxe p-5">
+      <div className="card-luxe p-4 sm:p-5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 rounded-2xl bg-blue-500/10 grid place-items-center shrink-0">
-            <Clock className="h-5 w-5 text-blue-600" />
+          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl sm:rounded-2xl bg-blue-500/10 grid place-items-center shrink-0">
+            <Clock className="h-4.5 w-4.5 sm:h-5 sm:w-5 h-[18px] w-[18px] text-blue-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-brand-dark">Dispatch Speed</h3>
-            <p className="text-xs text-muted-foreground">Days from order creation to dispatch</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Dispatch Speed</p>
+            <h3 className="font-semibold text-brand-dark text-sm sm:text-base leading-tight">Days from order to dispatch</h3>
           </div>
         </div>
 
@@ -376,12 +378,15 @@ export function ReportsPage() {
 
       {/* ── Orders by Department (admin / employee) ── */}
       {canSeeAll && (
-        <div className="card-luxe p-5">
-          <h3 className="font-semibold text-brand-dark mb-4">Orders by Department</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={byDept} margin={{ left: -10 }}>
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+        <div className="card-luxe p-4 sm:p-5">
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Analytics</p>
+            <h3 className="font-semibold text-brand-dark text-sm sm:text-base">Orders by Department</h3>
+          </div>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={byDept} margin={{ left: -16, right: 4, top: 4, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 9 }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 9 }} allowDecimals={false} tickLine={false} axisLine={false} />
               <Tooltip
                 formatter={(v: number, _: string, p: any) => [v, p.payload.fullName]}
                 contentStyle={{ borderRadius: 12, border: "1px solid var(--border)", fontSize: 12 }}
@@ -392,14 +397,41 @@ export function ReportsPage() {
         </div>
       )}
 
-      {/* ── Client-wise table (admin / employee, all-client view) ── */}
+      {/* ── Client-wise breakdown (admin / employee) ── */}
       {canSeeAll && byClient.length > 0 && (
-        <div className="card-luxe p-5">
-          <h3 className="font-semibold text-brand-dark mb-4 flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            {clientFilter === "all" ? "Client-wise Breakdown" : `Orders for ${clients.find(c=>c.id===clientFilter)?.companyName}`}
-          </h3>
-          <div className="overflow-x-auto -mx-1 px-1">
+        <div className="card-luxe p-4 sm:p-5">
+          <div className="mb-4">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Breakdown</p>
+            <h3 className="font-semibold text-brand-dark text-sm sm:text-base">
+              {clientFilter === "all" ? "Client-wise Summary" : `Orders — ${clients.find(c=>c.id===clientFilter)?.companyName}`}
+            </h3>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2.5">
+            {byClient.map(cl => (
+              <div key={cl.id} className="rounded-xl bg-secondary/50 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-brand-dark text-sm truncate">{cl.name}</p>
+                  <span className="text-xs text-muted-foreground shrink-0">{cl.total} order{cl.total !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-medium">{cl.dispatched} dispatched</span>
+                  <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-[11px] font-medium">{cl.delivered} delivered</span>
+                  {cl.avgDays !== null && (
+                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium
+                      ${cl.avgDays <= 7 ? "bg-success/10 text-success" : cl.avgDays <= 20 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-600"}`}>
+                      {cl.avgDays}d avg
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold">{fmtMoney(cl.revenue)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/60">
@@ -414,14 +446,10 @@ export function ReportsPage() {
                     <td className="py-2.5 pr-4 font-medium text-brand-dark whitespace-nowrap">{cl.name}</td>
                     <td className="py-2.5 pr-4">{cl.total}</td>
                     <td className="py-2.5 pr-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                        {cl.dispatched}
-                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">{cl.dispatched}</span>
                     </td>
                     <td className="py-2.5 pr-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">
-                        {cl.delivered}
-                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">{cl.delivered}</span>
                     </td>
                     <td className="py-2.5 pr-4 font-semibold text-brand-dark">{fmtMoney(cl.revenue)}</td>
                     <td className="py-2.5">
@@ -443,23 +471,24 @@ export function ReportsPage() {
       {/* ── Client-facing: status breakdown ── */}
       {isClient && (
         <>
-          <div className="card-luxe p-5">
-            <h3 className="font-semibold text-brand-dark mb-4 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-muted-foreground" /> Order Status Breakdown
-            </h3>
-            <div className="space-y-2">
+          <div className="card-luxe p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Overview</p>
+              <h3 className="font-semibold text-brand-dark text-sm sm:text-base">Order Status Breakdown</h3>
+            </div>
+            <div className="space-y-2.5">
               {STATUS_LIST.map(s => {
                 const cnt = filtered.filter(o => o.status === s).length;
                 const pct = total > 0 ? (cnt / total) * 100 : 0;
                 return (
-                  <div key={s} className="flex items-center gap-3">
-                    <div className="w-28 shrink-0">
+                  <div key={s} className="flex items-center gap-2 sm:gap-3">
+                    <div className="w-24 sm:w-28 shrink-0">
                       <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[s]}`}>{s}</span>
                     </div>
-                    <div className="flex-1 h-2.5 rounded-full bg-secondary overflow-hidden">
-                      <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                    <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
+                      <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
                     </div>
-                    <span className="w-6 text-right text-sm font-medium text-brand-dark shrink-0">{cnt}</span>
+                    <span className="w-5 text-right text-xs font-semibold text-brand-dark shrink-0">{cnt}</span>
                   </div>
                 );
               })}
@@ -468,24 +497,27 @@ export function ReportsPage() {
 
           {/* My recent orders */}
           {filtered.length > 0 && (
-            <div className="card-luxe p-5">
-              <h3 className="font-semibold text-brand-dark mb-4">My Orders</h3>
+            <div className="card-luxe p-4 sm:p-5">
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">History</p>
+                <h3 className="font-semibold text-brand-dark text-sm sm:text-base">My Orders</h3>
+              </div>
               <div className="space-y-2">
                 {filtered.slice(0,20).map(o => {
                   const d = dispatchDays(o);
                   return (
-                    <div key={o.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-secondary/40 text-sm">
+                    <div key={o.id} className="flex items-center justify-between gap-2 p-3 rounded-xl bg-secondary/40">
                       <div className="min-w-0">
-                        <p className="font-medium text-brand-dark">{o.orderNumber}</p>
-                        <p className="text-xs text-muted-foreground">{o.jewelleryType} · {fmtDate(o.createdAt)}</p>
+                        <p className="font-semibold text-brand-dark text-sm leading-tight">{o.orderNumber}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{o.jewelleryType} · {fmtDate(o.createdAt)}</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {d !== null && (
-                          <span className="text-xs text-muted-foreground">{d}d dispatch</span>
-                        )}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusColors[o.status] ?? "bg-secondary text-foreground"}`}>
                           {o.status}
                         </span>
+                        {d !== null && (
+                          <span className="text-[10px] text-muted-foreground">{d}d dispatch</span>
+                        )}
                       </div>
                     </div>
                   );
